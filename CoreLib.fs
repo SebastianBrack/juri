@@ -37,5 +37,5 @@ let crateEnvWithCoreLibFunctions () : Environment =
         (Identifier "sub", ProvidedFunction buildinSub)
         (Identifier "div", ProvidedFunction buildinDiv)
         (Identifier "bnd", ProvidedFunction buildinInBoundarys)
-        (Identifier "wq", ProvidedFunction buildinEquals)
+        (Identifier "eq", ProvidedFunction buildinEquals)
         ]
