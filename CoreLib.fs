@@ -26,7 +26,9 @@ let private buildinInBoundarys : ProvidedFunction =
 
 let private buildinPrint : ProvidedFunction =
     fun args ->
-        printfn "%A" args
+        match args with
+        | [x] -> printfn "%A" x
+        | _   -> printfn "%A" args
         Ok 0.
 
 
@@ -38,4 +40,5 @@ let crateEnvWithCoreLibFunctions () : Environment =
         (Identifier "div", ProvidedFunction buildinDiv)
         (Identifier "bnd", ProvidedFunction buildinInBoundarys)
         (Identifier "eq", ProvidedFunction buildinEquals)
+        (Identifier "print", ProvidedFunction buildinPrint)
         ]
