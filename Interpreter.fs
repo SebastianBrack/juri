@@ -39,9 +39,7 @@ and compute (prog: Instruction list) (state: ComputationState) : EvalResult<Comp
         match inst with
         | Expression exp ->
             match eval env exp with
-            | Ok x ->
-                evalResultPrinter false (Ok x) |> ignore
-                compute tail (Some x, env)
+            | Ok x -> compute tail (Some x, env)
             | Error e -> Error e
         | Assignment (id,exp) ->
             computeAssignment (id, exp) state
