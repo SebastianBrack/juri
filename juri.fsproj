@@ -11,6 +11,7 @@
     <Compile Include="Interpreter.fs" />
     <Compile Include="Parser.fs" />
     <Compile Include="Repl.fs" />
+    <Compile Include="CLI.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 </Project>
