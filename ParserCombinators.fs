@@ -1,41 +1,67 @@
 module ParserCombinators
 
-open System
 
 
-type CharStream =
-    { Content : char array
-      Position : int }
+type Position = int
 
-    static member Create charseq =
-        { Content = Seq.toArray charseq
-          Position = 0 }
 
-    member this.Read =
-        if this.Position >= Array.length this.Content
-        then None
+type CharStream<'ParserContext>(charseq: char seq, context: 'ParserContext) =
+    let content = Seq.toArray charseq 
+    let mutable position = 0
+    let mutable parserContext = context
+
+    member this.runParser(p: Parser<'T, 'ParserContext>) =
+        
+
+    member this.GetContext = parserContext
+
+    member this.HasNext =
+        position < content.Length
+
+    member this.HasNextN(n) =
+        position + n - 1 >= content.Length
+
+    member this.Next() =
+        if position >= content.Length then
+            None
         else 
-            let nextItem = this.Content.[this.Position]
-            let newStream = {this with Position=this.Position+1}
-            Some (nextItem, newStream)
+            let nextChar = content.[position]
+            position <- position + 1
+            Some nextChar
+
+    member this.NextN(n) =
+        if position + n - 1 >= content.Length then
+            None
+        else
+            let nextString = content.[position .. position + n - 1]
+            position <- position + n
+            Some nextString
+
+    member this.Peek() =
+        if position >= content.Length then
+            None
+        else
+            Some content.[position]
+
+    member this.PeekN(n) =
+        if position + n - 1 >= content.Length then
+            None
+        else
+            Some content.[position .. position + n - 1]
 
 
-type ParserResult<'T> = {
-    Result : 'T
-    Stream : CharStream }
+type ParserResult<'ResultType, 'ParserContext> =
+    | Succsess of 'ResultType * 'ParserContext * Position 
+    | Failure  of string * (Position * Position) option * 'ParserContext
+    | Fatal    of string * (Position * Position) option
 
 
-type ParserError = {
-    Message : string
-    Stream : CharStream }
-
-
-type Parser<'T> = Parser of (CharStream -> Result<ParserResult<'T>, ParserError>)
+type Parser<'T, 'ParserContext> = Parser of (CharStream -> ParserResult<'T, 'ParserContext>)
 
 
 let run (Parser p) input = p input
 
-
+let test (stream: CharStream) = stream.
 
 // ---------------------------------
 // combinators and mapping functions
@@ -46,7 +72,7 @@ let run (Parser p) input = p input
 let map mapper parser =
     fun stream ->
         match run parser stream with
-        | Ok {Result = r; Stream = rest} -> Ok { Result = mapper r; Stream = rest }
+        | Ok t = r; Stream = rest} -> Ok { Result = mapper r; Stream = rest }
         | Error perror                   -> Error perror
     |> Parser
 
