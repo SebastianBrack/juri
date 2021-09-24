@@ -454,3 +454,6 @@ bower_components
 ### WebSharper ###
 Scripts/
 .ionide
+
+## VSCode Counter
+.VSCodeCounter/
