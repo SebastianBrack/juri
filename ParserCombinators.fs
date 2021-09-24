@@ -270,6 +270,38 @@ let createParserForwarder () =
 // Basic Parsers
 //--------------
 
+let EOS =
+    fun (stream: CharStream<_>) ->
+        let c : obj = stream.GetContext()
+        if stream.HasNext then
+            Succsess ((), c, 0)
+        else
+            Failure ("End of stream expected but there is more stuff.", None, c)
+    |> Parser
+
+
+
+let newline =
+    fun (stream: CharStream<_>) ->
+        let c : obj = stream.GetContext()
+        if stream.HasNext then
+            let nextc = stream.Next()
+            if nextc = '\n' || nextc = '\r' then
+                Succsess ((), c, 1)
+            elif stream.HasNextN(2) && stream.NextN(2) = [|'\r'; '\n'|] then
+                Succsess ((), c, 2)
+            else
+                Failure ("Expected a new line.", None, c)
+        else
+            Failure ("Expected a new line but the stream ends.", None, c)
+    |> Parser
+
+
+let newlineOrEOS =
+    either newline EOS
+    
+
+
 let pchar c =
     fun (stream: CharStream<_>) ->
         if not stream.HasNext then
@@ -305,3 +337,4 @@ let satisfies f =
         match stream.GetContext() |> f with
         | true  -> Succsess ((), stream.GetContext(), 0)
         | false -> Failure ("", None, stream.GetContext())
+    |> Parser
