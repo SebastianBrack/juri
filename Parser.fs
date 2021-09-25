@@ -5,23 +5,25 @@ open ParserCombinators
 open LanguageModel
 
 
-let parserErrorPrinter { Message = msg; Stream = stream } =
+let parserErrorPrinter stream msg =
     Console.ForegroundColor <- ConsoleColor.Red
-    let space = [ for _ in 0 .. (stream.Position - 1) -> " " ] |> String.Concat
+    //let space = [ for _ in 0 .. (stream.Position - 1) -> " " ] |> String.Concat
     printfn ""
-    printfn "%s" (stream.Content |> String.Concat)
-    printfn "%s^" space
+    //printfn "%s" (stream.Content |> String.Concat)
+    //printfn "%s^" space
     printfn "Error: %s" msg
     printfn ""
     Console.ResetColor()
 
 
-let private nl = pchar '\n'
-
 
 let private ws =
     many (pchar ' ')
 
+
+let EOS = createEOS<unit> ()
+let newline = createNewline<unit> ()
+let newlineEOS = either newline EOS
 
 
 // identifier
@@ -54,7 +56,7 @@ let def =
     pstring "def" .>> ws
 
 let blockEnd =
-    pstring "end" .>> ws .>> nl
+    pstring "end" .>> ws .>> newlineEOS
 
 let openParen =
     pchar '(' .>> ws
@@ -102,50 +104,56 @@ expressionImpl :=
     <|> variableReference
     <|> number
     .>> ws
+    |> deferr "Kein Ausdruck gefunden."
 
 
 // instructions
 let private instruction, instructionImpl = createParserForwarder ()
 
 let private codeblock =
-    until instruction blockEnd
+    many1 (instruction) .>> blockEnd
     |> deferr "Der Codeblock ist nicht vollständig"
 
 let private instructionExpression =
     expression
-    .>> nl
+    .>> newlineEOS
     |>> Expression
 
 let private assignment =
     identifier .>> eq .>>. expression
-    .>> nl
+    .>> newlineEOS
     |>> fun (id, exp) -> Assignment (id, exp)
 
 let private functionDefinition =
     def >>. identifier .>>. (many1 identifier)
-    .>> nl
+    .>> newline
     .>>. codeblock
     |>> fun ((id, argNames), body) -> FunctionDefinition (id, argNames, body)
 
 let private loop =
     ifloop >>. expression
-    .>> nl
+    .>> newline
     .>>. codeblock
     |>> fun (con, body) -> Loop (con, body)
 
 let private programm =
     many1 instruction
-    // |> deferr "Die Eingabe war leer."
 
 instructionImpl :=
     [loop; functionDefinition; assignment; instructionExpression;]
     |> choice
+    |> deferr "Keine Anweisungen gefunden."
 
 
 
 
 let parseProgramm (text: string) =
-    let stream = CharStream.Create text
-    let prog = run programm stream
-    // eprintfn "Parsed Programm: %A" prog
+    let stream = CharStream(text, ())
+    let prog = stream.RunParser(programm)
+    match prog with
+    | Failure (m,_) ->
+        parserErrorPrinter stream m
+        printfn "%A" stream
+    | _ -> ()
+    eprintfn "Parsed Programm: %A" prog
     prog

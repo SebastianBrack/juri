@@ -6,10 +6,12 @@ open System
 
 type Position = int
 
+type ParserError = unit 
+
 
 type ParserResult<'ResultType, 'ParserContext> =
     | Succsess of 'ResultType * 'ParserContext * Position 
-    | Failure  of string * (Position * Position) option * 'ParserContext
+    | Failure  of string * ParserError option
 
 let isSuccsess = function | Succsess _ -> true  | Failure _ -> false
 let isFailure  = function | Succsess _ -> false | Failure _ -> true
@@ -19,43 +21,30 @@ type Parser<'T, 'ParserContext> = Parser of (CharStream<'ParserContext> -> Parse
 
 and CharStream<'ParserContext>(charseq: char seq, context: 'ParserContext) =
     let content = Seq.toArray charseq 
-    let mutable position = 0
     let mutable parserContext = context
-    let unpackParser (Parser p) = p
+    let mutable position : Position = 0
+
 
     member this.RunParser(parser: Parser<'T, 'ParserContext>) =
         let (Parser p) = parser
         p this
 
     member this.GetContext() = parserContext
-
     member this.SetContext(c) = parserContext <- c
 
+    member this.GetPosition() = position
     member this.SetPosition(i) = position <- i
-    member this.IncrementPosition(i) = position <- position + 1
-    member this.DecrementPosition(i) = position <- position - 1
 
     member this.HasNext =
         position < content.Length
 
     member this.HasNextN(n) =
-        position + n - 1 >= content.Length
+        position + n - 1 < content.Length
 
-    member this.Next() = content.[position]
+    member this.Next = content.[position]
 
     member this.NextN(n) = content.[position .. position + n - 1]
 
-    member this.Peek() =
-        if position >= content.Length then
-            None
-        else
-            Some content.[position]
-
-    member this.PeekN(n) =
-        if position + n - 1 >= content.Length then
-            None
-        else
-            Some content.[position .. position + n - 1]
 
 
 let run (Parser p) stream = p stream
@@ -72,7 +61,7 @@ let map mapper parser =
     fun stream ->
         match run parser stream with
         | Succsess (r,c,p) -> Succsess (mapper r, c, p)
-        | fail             -> fail
+        | Failure (m,e)    -> Failure (m,e)
     |> Parser
 
 /// Infix version of map.
@@ -83,8 +72,8 @@ let ( |>> ) parser mapper = map mapper parser
 let deferr msg parser =
     fun stream ->
         match run parser stream with
-        | Failure (_,b,c) -> Failure (msg,b,c)
-        | result          -> result
+        | Failure (_,b) -> Failure (msg,b)
+        | result        -> result
     |> Parser
 
 
@@ -92,20 +81,21 @@ let deferr msg parser =
 let ( .>>. ) left right =
     fun (stream: CharStream<'c>) ->
         let cOriginal = stream.GetContext()
+        let pOriginal = stream.GetPosition()
         match run left stream with
-        | Failure (m,pp,c)    -> Failure (m,pp,c)
+        | Failure (m,pe)    -> Failure (m,pe)
         | Succsess (r1,c1,p1) ->
             stream.SetContext(c1)
-            stream.IncrementPosition(p1)
+            stream.SetPosition(p1)
             match run right stream with
-            | Failure (m,pp,c2) ->
+            | Failure (m,pe) ->
                 stream.SetContext(cOriginal)
-                stream.DecrementPosition(p1)
-                Failure (m,pp,c2)
+                stream.SetPosition(pOriginal)
+                Failure (m,pe)
             | Succsess (r2,c2,p2) ->
                 stream.SetContext(c2)
-                stream.IncrementPosition(p2)
-                Succsess ((r1,r2), c2, p1+p2)
+                stream.SetPosition(p2)
+                Succsess ((r1,r2), c2, p2)
     |> Parser
 
 
@@ -114,20 +104,21 @@ let ( .>>. ) left right =
 let ( >>. ) left right =
     fun (stream: CharStream<'c>) ->
         let cOriginal = stream.GetContext()
+        let pOriginal = stream.GetPosition()
         match run left stream with
-        | Failure (a,b,c) as f1 -> f1
+        | Failure (m,e)      -> Failure (m,e)
         | Succsess (_,c1,p1) ->
             stream.SetContext(c1)
-            stream.IncrementPosition(p1)
+            stream.SetPosition(p1)
             match run right stream with
-            | Failure (m,pp,c2) ->
+            | Failure (m,pe) ->
                 stream.SetContext(cOriginal)
-                stream.DecrementPosition(p1)
-                Failure (m,pp,c2)
+                stream.SetPosition(pOriginal)
+                Failure (m,pe)
             | Succsess (r2,c2,p2) ->
                 stream.SetContext(c2)
-                stream.IncrementPosition(p2)
-                Succsess (r2, c2, p1+p2)
+                stream.SetPosition(p2)
+                Succsess (r2, c2, p2)
     |> Parser
 
 
@@ -136,20 +127,21 @@ let ( >>. ) left right =
 let ( .>> ) left right =
     fun (stream: CharStream<'c>) ->
         let cOriginal = stream.GetContext()
+        let pOriginal = stream.GetPosition()
         match run left stream with
-        | Failure (a,b,c) as f1 -> f1
-        | Succsess (r1,c1,p1)   ->
+        | Failure (m,e)       -> Failure (m,e)
+        | Succsess (r1,c1,p1) ->
             stream.SetContext(c1)
-            stream.IncrementPosition(p1)
+            stream.SetPosition(p1)
             match run right stream with
-            | Failure (m,pp,c2) ->
+            | Failure (m,pe) ->
                 stream.SetContext(cOriginal)
-                stream.DecrementPosition(p1)
-                Failure (m,pp,c2)
+                stream.SetPosition(pOriginal)
+                Failure (m,pe)
             | Succsess (_,c2,p2) ->
                 stream.SetContext(c2)
-                stream.IncrementPosition(p2)
-                Succsess (r1, c2, p1+p2)
+                stream.SetPosition(p2)
+                Succsess (r1, c2, p2)
     |> Parser
 
 
@@ -157,19 +149,18 @@ let ( .>> ) left right =
 /// first parser and if it fails applies the second parser.
 let either left right =
     fun (stream: CharStream<'c>) ->
-        let cOriginal = stream.GetContext()
         match run left stream with
         | Succsess (r1,c1,p1) as s1 ->
             stream.SetContext(c1)
-            stream.IncrementPosition(p1)
+            stream.SetPosition(p1)
             s1
-        | Failure (m1,pp1,c1) ->
+        | Failure (m1,pe1) ->
             match run right stream with
-            | Failure (m2,pp2,c2) ->
-                Failure (m1,pp1,c1)
+            | Failure (m2,pe2) ->
+                Failure (m1,pe1)
             | Succsess (r2,c2,p2) as s2 ->
                 stream.SetContext(c2)
-                stream.IncrementPosition(p2)
+                stream.SetPosition(p2)
                 s2
     |> Parser
 
@@ -179,20 +170,20 @@ let ( <|> ) left right = either left right
 
 /// Works like either but instad of two parsers choice combines a whole sequence of parsers.
 //let choice parsers = Seq.reduce either parsers
-let coice parsers =
+let choice parsers =
     fun (stream: CharStream<'c>) ->
-        let cOriginal = stream.GetContext()
         let succseedingParser p =
             match run p stream with
             | Succsess (_) as s -> Some s
             | Failure (_)       -> None
         match Seq.tryPick succseedingParser parsers with
-        | None -> Failure ("Nothing parsable was found in the input stream.", None, cOriginal)
+        | None -> Failure ("Nothing parsable was found in the input stream.", None)
         | Some (Succsess (r,c,p)) ->
             stream.SetContext(c)
-            stream.IncrementPosition(p)
+            stream.SetPosition(p)
             Succsess (r,c,p)
-        | _ -> Failure ("Nothing parsable was found in the input stream.", None, cOriginal)
+        | _ -> Failure ("Nothing parsable was found in the input stream.", None)
+    |> Parser
 
 
 /// Chains the parser after itself until it fails. The results get combined
@@ -200,11 +191,11 @@ let coice parsers =
 let many parser =
     let rec innerFnc results stream =
         match run parser stream with
-        | Failure (m,pp,c) ->
-            Succsess (results, stream.GetContext(), 0) 
+        | Failure (m,pe) ->
+            Succsess (results, stream.GetContext(), stream.GetPosition()) 
         | Succsess (r,c,p) ->
             stream.SetContext(c)
-            stream.IncrementPosition(p)
+            stream.SetPosition(p)
             innerFnc (results @ [r]) stream
     Parser (innerFnc [])
 
@@ -213,29 +204,15 @@ let many parser =
 let many1 parser =
     let rec innerFnc (results: 'a list) stream =
         match run parser stream with
-        | Failure (m,pp,c) when results.IsEmpty ->
-            Failure (m,pp,c)
-        | Failure (m,pp,c) ->
-            Succsess (results, stream.GetContext(), 0) 
+        | Failure (m,pe) when results.IsEmpty ->
+            Failure (m,pe)
+        | Failure (m,pe) ->
+            Succsess (results, stream.GetContext(), stream.GetPosition()) 
         | Succsess (r,c,p) ->
             stream.SetContext(c)
-            stream.IncrementPosition(p)
+            stream.SetPosition(p)
             innerFnc (results @ [r]) stream
     Parser (innerFnc [])
-
-
-/// Chains the parser after itself until the boundary parser succseeds. The results get combined
-/// into a list. If the end of the stream is reached but the boundary parser didnt succseeds
-/// jet the whole parser fails.
-(* let until parser boundary =
-    let rec innerFnc parser boundary (results: 'a list) (stream: CharStream<'c>) =
-        let cOriginal = stream.GetContext()
-        match run parser stream with
-        | Succsess (r,c,p) ->
-            stream.SetContext(c)
-            stream.SetPosition
-
-    Parser (innerFnc parser boundary) *)
 
 
 /// Applies the parser. If it succeeds it wrappes the result in a list.
@@ -245,10 +222,10 @@ let optional parser =
         match run parser stream with
         | Succsess (r,c,p) ->
             stream.SetContext(c)
-            stream.IncrementPosition(p)
+            stream.SetPosition(p)
             Succsess ([r],c,p)
-        | Failure (m,pp,c) ->
-            Succsess ([], c, 0)
+        | Failure (m,pp) ->
+            Succsess ([], stream.GetContext(), stream.GetPosition())
     |> Parser
 
 
@@ -257,7 +234,7 @@ let createParserForwarder () =
     let implementationDummy : Parser<_,_> ref =
         ref (
             (fun (stream: CharStream<'c>) ->
-                Failure ("Dummy was not overwritten with actual implementation", None, stream.GetContext())
+                Failure ("Dummy was not overwritten with actual implementation", None)
             )
             |> Parser
             )
@@ -270,50 +247,45 @@ let createParserForwarder () =
 // Basic Parsers
 //--------------
 
-let EOS =
+let createEOS<'c> () =
     fun (stream: CharStream<_>) ->
-        let c : obj = stream.GetContext()
-        if stream.HasNext then
-            Succsess ((), c, 0)
+        let c: 'c = stream.GetContext()
+        if not stream.HasNext then
+            Succsess ((), c, stream.GetPosition())
         else
-            Failure ("End of stream expected but there is more stuff.", None, c)
+            Failure ("End of stream expected but there is more stuff.", None)
     |> Parser
 
 
 
-let newline =
+let createNewline<'c> () =
     fun (stream: CharStream<_>) ->
-        let c : obj = stream.GetContext()
+        let c: 'c = stream.GetContext()
         if stream.HasNext then
-            let nextc = stream.Next()
+            let nextc = stream.Next
             if nextc = '\n' || nextc = '\r' then
-                Succsess ((), c, 1)
+                Succsess ((), c, stream.GetPosition() + 1)
             elif stream.HasNextN(2) && stream.NextN(2) = [|'\r'; '\n'|] then
-                Succsess ((), c, 2)
+                Succsess ((), c, stream.GetPosition() + 2)
             else
-                Failure ("Expected a new line.", None, c)
+                Failure ("Expected a new line.", None)
         else
-            Failure ("Expected a new line but the stream ends.", None, c)
+            Failure ("Expected a new line but the stream ends.", None)
     |> Parser
-
-
-let newlineOrEOS =
-    either newline EOS
-    
 
 
 let pchar c =
     fun (stream: CharStream<_>) ->
         if not stream.HasNext then
             let message = sprintf "Expected: %c but the input stream is empty." c
-            Failure (message, None, stream.GetContext())
+            Failure (message, None)
         else 
-            let nextc = stream.Next()
+            let nextc = stream.Next
             if nextc <> c then
                 let message = sprintf "Expected: %c but instead found %c." c nextc
-                Failure (message, None, stream.GetContext())
+                Failure (message, None)
             else
-                Succsess (c, stream.GetContext(), 1)
+                Succsess (c, stream.GetContext(), stream.GetPosition() + 1)
     |> Parser
 
 
@@ -321,20 +293,20 @@ let pstring (str: string) =
     fun (stream: CharStream<_>) ->
         if not <| stream.HasNextN(str.Length) then
             let message = sprintf "Expected: %s but the input stream ends." str
-            Failure (message, None, stream.GetContext())
+            Failure (message, None)
         else 
             let nextstr = stream.NextN(str.Length) |> String.Concat
             if nextstr <> str then
                 let message = sprintf "Expected: \"%s\" but instead found \"%s\"." str nextstr
-                Failure (message, None, stream.GetContext())
+                Failure (message, None)
             else
-                Succsess (str, stream.GetContext(), str.Length)
+                Succsess (str, stream.GetContext(), stream.GetPosition() + str.Length)
     |> Parser
 
 
 let satisfies f =
     fun (stream: CharStream<'c>) ->
         match stream.GetContext() |> f with
-        | true  -> Succsess ((), stream.GetContext(), 0)
-        | false -> Failure ("", None, stream.GetContext())
+        | true  -> Succsess ((), stream.GetContext(), stream.GetPosition())
+        | false -> Failure ("", None)
     |> Parser

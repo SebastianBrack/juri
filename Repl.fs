@@ -16,12 +16,11 @@ let rec private repl (state: ComputationState) =
         line <- stdin.ReadLine()
     userInput <- userInput + line.TrimEnd(';') + "\n"
     match parseProgramm userInput with
-    | Result.Ok presult ->
-        compute presult.Result state
+    | Succsess (r,_,_) ->
+        compute r state
         |> evalResultPrinter true
         >>= repl
-    | Result.Error e ->
-        parserErrorPrinter e
+    | Failure (m,pe) ->
         repl state
 
 
