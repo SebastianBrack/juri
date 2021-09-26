@@ -56,6 +56,9 @@ let runOn stream (Parser p) = p stream
 //----------------------------------
 
 
+let join2 (a,bs) = a :: bs
+
+
 /// Maps the result of a Parser according to the mapper to another Parser.
 let map mapper parser =
     fun stream ->
@@ -74,6 +77,30 @@ let deferr msg parser =
         match run parser stream with
         | Failure (_,b) -> Failure (msg,b)
         | result        -> result
+    |> Parser
+
+
+let updateContext f parser =
+    fun stream ->
+        match run parser stream with
+        | Failure (m,e) ->
+            Failure (m,e)
+        | Succsess (r,c,p) ->
+            let newContext = stream.GetContext() |> f r
+            stream.SetContext(newContext)
+            Succsess (r, newContext, p)
+    |> Parser
+
+
+let satisfies f parser =
+    fun stream ->
+        match run parser stream with
+        | Failure (m,e) ->
+            Failure (m,e)
+        | Succsess (r,c,p) ->
+            match stream.GetContext() |> f r with
+            | true  -> Succsess (r,c,p)
+            | false -> Failure ("", None)
     |> Parser
 
 
@@ -303,10 +330,3 @@ let pstring (str: string) =
                 Succsess (str, stream.GetContext(), stream.GetPosition() + str.Length)
     |> Parser
 
-
-let satisfies f =
-    fun (stream: CharStream<'c>) ->
-        match stream.GetContext() |> f with
-        | true  -> Succsess ((), stream.GetContext(), stream.GetPosition())
-        | false -> Failure ("", None)
-    |> Parser

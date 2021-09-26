@@ -5,6 +5,24 @@ open ParserCombinators
 open LanguageModel
 
 
+type JuriContext =
+    {
+        InFunctionDefinition : bool
+        InLoop : bool
+        IndentationLevel : int
+        Variables : Identifier list
+        Functions : Identifier list
+    }
+    static member Default =
+        {
+            InFunctionDefinition = false
+            InLoop = false
+            IndentationLevel = 0
+            Variables = []
+            Functions = []
+        }
+
+
 let parserErrorPrinter stream msg =
     Console.ForegroundColor <- ConsoleColor.Red
     //let space = [ for _ in 0 .. (stream.Position - 1) -> " " ] |> String.Concat
@@ -18,11 +36,11 @@ let parserErrorPrinter stream msg =
 
 
 let private ws =
-    many (pchar ' ')
+    many (pchar ' ' <|> pchar '\t')
 
 
-let EOS = createEOS<unit> ()
-let newline = createNewline<unit> ()
+let EOS = createEOS<JuriContext> ()
+let newline = createNewline<JuriContext> ()
 let newlineEOS = either newline EOS
 
 
@@ -54,9 +72,6 @@ let ifloop =
 
 let def =
     pstring "def" .>> ws
-
-let blockEnd =
-    pstring "end" .>> ws .>> newlineEOS
 
 let openParen =
     pchar '(' .>> ws
@@ -110,19 +125,43 @@ expressionImpl :=
 // instructions
 let private instruction, instructionImpl = createParserForwarder ()
 
+
+
 let private codeblock =
-    many1 (instruction) .>> blockEnd
-    |> deferr "Der Codeblock ist nicht vollständig"
+
+    let indentation =
+        ws |>> List.length
+
+    let indentedInstruction =
+        indentation .>>. instruction
+
+    let codeblockStart =
+        indentedInstruction |> satisfies (fun (level,_) c -> level > c.IndentationLevel)
+        |> updateContext (fun (level,_) c -> {c with IndentationLevel = level})
+        |>> snd
+
+    let codeblockRest =
+        indentedInstruction |> satisfies (fun (level,_) c -> level = c.IndentationLevel)
+        |>> snd
+    
+    codeblockStart .>>. many (codeblockRest)
+    |>> join2
+
+
 
 let private instructionExpression =
     expression
     .>> newlineEOS
     |>> Expression
 
+
+
 let private assignment =
     identifier .>> eq .>>. expression
     .>> newlineEOS
     |>> fun (id, exp) -> Assignment (id, exp)
+
+
 
 let private functionDefinition =
     def >>. identifier .>>. (many1 identifier)
@@ -130,14 +169,20 @@ let private functionDefinition =
     .>>. codeblock
     |>> fun ((id, argNames), body) -> FunctionDefinition (id, argNames, body)
 
+
+
 let private loop =
     ifloop >>. expression
     .>> newline
     .>>. codeblock
     |>> fun (con, body) -> Loop (con, body)
 
+
+
 let private programm =
     many1 instruction
+
+
 
 instructionImpl :=
     [loop; functionDefinition; assignment; instructionExpression;]
@@ -148,7 +193,7 @@ instructionImpl :=
 
 
 let parseProgramm (text: string) =
-    let stream = CharStream(text, ())
+    let stream = CharStream(text, JuriContext.Default)
     let prog = stream.RunParser(programm)
     match prog with
     | Failure (m,_) ->
@@ -156,4 +201,5 @@ let parseProgramm (text: string) =
         printfn "%A" stream
     | _ -> ()
     eprintfn "Parsed Programm: %A" prog
+    eprintfn "%A" (stream.GetContext())
     prog
