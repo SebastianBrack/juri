@@ -33,7 +33,9 @@ and CharStream<'ParserContext>(charseq: char seq, context: 'ParserContext) =
     member this.SetContext(c) = parserContext <- c
 
     member this.GetPosition() = position
-    member this.SetPosition(i) = position <- i
+    member this.SetPosition(i) =
+        //eprintfn "set stream position to %i %A" i (if this.HasNext then [content.[position]] else ['x'])
+        position <- i
 
     member this.GetChars = content
 
@@ -96,14 +98,20 @@ let updateContext f parser =
 
 
 let satisfies f parser =
-    fun stream ->
+    fun (stream: CharStream<'c>) ->
+        let cOriginal = stream.GetContext()
+        let pOriginal = stream.GetPosition()
         match run parser stream with
         | Failure (m,e) ->
             Failure (m,e)
         | Succsess (r,c,p) ->
             match stream.GetContext() |> f r with
-            | true  -> Succsess (r,c,p)
-            | false -> Failure ("", None)
+            | false ->
+                stream.SetContext(cOriginal)
+                stream.SetPosition(pOriginal)
+                Failure ("", None)
+            | true  ->
+                Succsess (r,c,p)
     |> Parser
 
 

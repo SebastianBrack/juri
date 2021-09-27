@@ -160,7 +160,7 @@ let private codeblock =
         indentedInstruction |> satisfies (fun (level,_) c -> level = c.IndentationStack.Head)
         |>> snd
     
-    codeblockStart .>>. many (codeblockRest)
+    codeblockStart .>>. (many codeblockRest)
     |>> join2
     |> updateContext (fun _ c -> {c with IndentationStack = c.IndentationStack.Tail})
 
@@ -217,6 +217,6 @@ let parseProgramm (text: string) =
     | Failure (m,e) ->
         parserErrorPrinter stream m e
     | Succsess(r,_,_) ->
-        printfn "%A" r
+        //printfn "%A" r
         ()
     prog
