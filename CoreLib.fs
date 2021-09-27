@@ -32,7 +32,7 @@ let private buildinPrint : ProvidedFunction =
         Ok 0.
 
 
-let crateEnvWithCoreLibFunctions () : Environment =
+let createEnvWithCoreLibFunctions () : Environment =
     Map [
         (Identifier "add", ProvidedFunction buildinAdd)
         (Identifier "mul", ProvidedFunction buildinMul)

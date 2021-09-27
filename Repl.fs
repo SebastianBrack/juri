@@ -26,5 +26,5 @@ let rec private repl (state: ComputationState) =
 
 
 let startRepl () =
-    let initialState : ComputationState = (None, crateEnvWithCoreLibFunctions())
+    let initialState : ComputationState = (None, createEnvWithCoreLibFunctions())
     repl initialState

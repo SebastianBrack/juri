@@ -9,7 +9,7 @@ open CoreLib
 open Runtime
 
 let private runScript script =
-    let initialState : ComputationState = (None, crateEnvWithCoreLibFunctions())
+    let initialState : ComputationState = (None, createEnvWithCoreLibFunctions())
     let prog = parseProgramm (script + "\n")
     match parseProgramm (script+"\n") with
     | Succsess (r,c,p) -> 
@@ -17,7 +17,7 @@ let private runScript script =
     | fail -> (); 0
 
 let run argv =
-    let initialState : ComputationState = (None, crateEnvWithCoreLibFunctions())
+    let initialState : ComputationState = (None, createEnvWithCoreLibFunctions())
     match argv with
     | [||] ->
         printfn "juri repl (juri version 0.1.0)"
