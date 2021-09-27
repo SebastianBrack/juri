@@ -56,23 +56,21 @@ let EOS = createEOS<JuriContext>()
 let newlineEOS = either newline EOS
 
 
-// identifier
-
-let private identifierStart =
-    '_' :: ['a'..'z'] @ ['A'..'Z']
-    |> List.map pchar
-    |> choice
-
-let private identifierTail =
-    '_' :: ['a'..'z'] @ ['A'..'Z'] @ ['0'..'9']
-    |> List.map pchar
-    |> choice
-
 
 let private identifier =
+
+    let identifierStart =
+        '_' :: ['a'..'z'] @ ['A'..'Z']
+        |> Set |> anyOf
+
+    let identifierTail =
+        '_' :: ['a'..'z'] @ ['A'..'Z'] @ ['0'..'9']
+        |> Set |> anyOf
+
     identifierStart .>>. (many identifierTail)
     .>> ws
     |>> fun (c, cs) -> c :: cs |> String.Concat |> Identifier
+
 
 
 // keywords and controll chars
@@ -93,45 +91,45 @@ let closingParen =
 
 
 // expressions
-
 let private expression, expressionImpl = createParserForwarder ()
 
 
-// number
-let private punctuation = pchar '.'
-let private sign = pchar '-' <|> pchar '+'
-
-let private digit =
-    "0123456789"
-    |> Seq.map pchar
-    |> choice
 
 let private number = 
+
+    let punctuation = pchar '.'
+    let sign = pchar '-' <|> pchar '+'
+
+    let digit =
+        "0123456789"
+        |> Set |> anyOf
+
     (optional sign) .>>. (many1 digit) .>>. (optional punctuation) .>>. (many digit)
     |>> fun (((s,ds),p),ds2) -> s@ds@p@ds2 |> List.map string |> List.reduce ( + ) |> float |> LiteralNumber
     .>> ws
     |> deferr "Expected a Number!"
 
 
-// variable reference
+
 let private variableReference =
     identifier
     |>> VariableReference
 
 
-// function call
+
 let private functionCall =
     identifier .>> openParen .>>. (many1 expression) .>> closingParen
     |>> FunctionCall
 
 
-// expression
+
 expressionImpl :=
     functionCall
     <|> variableReference
     <|> number
     .>> ws
     |> deferr "Kein Ausdruck gefunden."
+
 
 
 // instructions
