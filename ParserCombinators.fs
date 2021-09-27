@@ -322,10 +322,10 @@ let anyChar () =
     |> Parser
 
 
-let anyOf (chars: char set) =
+let anyOf (chars: char Set) =
     fun (stream: CharStream<_>) ->
         if not stream.HasNext then
-            let message = sprintf "Expected: %c but the input stream is empty." c
+            let message = sprintf "Expected anything of %A but the input stream is empty." chars
             Failure (message, None)
         else 
             let nextc = stream.Next
@@ -333,7 +333,7 @@ let anyOf (chars: char set) =
                 let message = sprintf "Expected anything of: %A but instead found %c." chars nextc
                 Failure (message, Some(stream.GetPosition()))
             else
-                Succsess (c, stream.GetContext(), stream.GetPosition() + 1)
+                Succsess (nextc, stream.GetContext(), stream.GetPosition() + 1)
     |> Parser
 
 

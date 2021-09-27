@@ -49,9 +49,10 @@ let parserErrorPrinter (stream: CharStream<'c>) msg (error: ParserError option) 
 let private ws =
     many (pchar ' ' <|> pchar '\t')
 
-
-let EOS = createEOS<JuriContext> ()
 let newline = createNewline<JuriContext> ()
+
+let EOS = createEOS<JuriContext>()
+
 let newlineEOS = either newline EOS
 
 
