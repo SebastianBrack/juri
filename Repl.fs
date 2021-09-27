@@ -15,6 +15,7 @@ let rec private repl (state: ComputationState) =
         userInput <- userInput + line + "\n"
         line <- stdin.ReadLine()
     userInput <- userInput + line.TrimEnd(';') + "\n"
+    printfn "user input: %A" (userInput.ToCharArray())
     match parseProgramm userInput with
     | Succsess (r,_,_) ->
         compute r state
