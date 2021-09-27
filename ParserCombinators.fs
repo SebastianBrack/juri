@@ -329,7 +329,7 @@ let anyOf (chars: char Set) =
             Failure (message, None)
         else 
             let nextc = stream.Next
-            if Set.contains nextc chars then
+            if not <| Set.contains nextc chars then
                 let message = sprintf "Expected anything of: %A but instead found %c." chars nextc
                 Failure (message, Some(stream.GetPosition()))
             else
