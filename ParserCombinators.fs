@@ -312,6 +312,31 @@ let createNewline<'c> () =
     |> Parser
 
 
+let anyChar () =
+    fun (stream: CharStream<_>) ->
+        if not stream.HasNext then
+            let message = sprintf "Expected a char but the input stream is empty."
+            Failure (message, None)
+        else
+            Succsess (stream.Next, stream.GetContext(), stream.GetPosition() + 1)
+    |> Parser
+
+
+let anyOf (chars: char set) =
+    fun (stream: CharStream<_>) ->
+        if not stream.HasNext then
+            let message = sprintf "Expected: %c but the input stream is empty." c
+            Failure (message, None)
+        else 
+            let nextc = stream.Next
+            if Set.contains nextc chars then
+                let message = sprintf "Expected anything of: %A but instead found %c." chars nextc
+                Failure (message, Some(stream.GetPosition()))
+            else
+                Succsess (c, stream.GetContext(), stream.GetPosition() + 1)
+    |> Parser
+
+
 let pchar c =
     fun (stream: CharStream<_>) ->
         if not stream.HasNext then
