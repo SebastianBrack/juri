@@ -2,6 +2,7 @@ module CLI
 
 open Repl
 open Parser
+open ParserCombinators
 open System.IO
 open Interpreter
 open CoreLib
@@ -9,11 +10,11 @@ open Runtime
 
 let private runScript script =
     let initialState : ComputationState = (None, crateEnvWithCoreLibFunctions())
+    let prog = parseProgramm (script + "\n")
     match parseProgramm (script+"\n") with
-    | Result.Ok presult -> 
-        compute presult.Result initialState |> ignore; 1
-    | Result.Error e -> 
-        parserErrorPrinter e; 0
+    | Succsess (r,c,p) -> 
+        compute r initialState |> ignore; 0
+    | fail -> (); 0
 
 let run argv =
     let initialState : ComputationState = (None, crateEnvWithCoreLibFunctions())

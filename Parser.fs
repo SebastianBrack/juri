@@ -198,8 +198,5 @@ let parseProgramm (text: string) =
     match prog with
     | Failure (m,_) ->
         parserErrorPrinter stream m
-        printfn "%A" stream
     | _ -> ()
-    eprintfn "Parsed Programm: %A" prog
-    eprintfn "%A" (stream.GetContext())
     prog
