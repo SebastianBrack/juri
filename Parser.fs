@@ -83,8 +83,8 @@ let ifloop =
 let repeat =
     optional (pstring "repeat") .>> ws |>> (function | [] -> false | _ -> true)
 
-let def =
-    pstring "def" .>> ws
+let jfun =
+    pstring "fun" .>> ws
 
 let openParen =
     pchar '(' .>> ws
@@ -183,7 +183,7 @@ let private assignment =
 
 
 let private functionDefinition =
-    def >>. identifier .>>. (many1 identifier)
+    jfun >>. identifier .>>. (many1 identifier)
     .>> newlineEOS .>> emptyLines
     .>>. codeblock
     |>> fun ((id, argNames), body) -> FunctionDefinition (id, argNames, body)
