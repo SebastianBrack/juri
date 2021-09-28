@@ -26,7 +26,7 @@ let run argv =
         if File.Exists(path) then
             printfn $"executing file: \"{path}\""
             let fileContent = File.ReadAllText(path)
-            printfn "read script from file %A" (fileContent.ToCharArray())
+            //printfn "read script from file %A" (fileContent.ToCharArray())
             runScript(File.ReadAllText(path))
         else
             printfn $"file not found: \"{path}\""; 0
