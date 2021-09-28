@@ -102,7 +102,7 @@ let updateContext f parser =
             Failure (m,e)
         | Succsess (r,c,p) ->
             let newContext = stream.GetContext() |> f r
-            eprintfn "contextUpdate %A" newContext
+            //eprintfn "contextUpdate %A" newContext
             stream.SetContext(newContext)
             Succsess (r, newContext, p)
     |> Parser
