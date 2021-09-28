@@ -7,12 +7,13 @@ open Runtime
 
 
 
-let rec private computeLoop (con: Expression) (body: Instruction list) (state: ComputationState) : EvalResult<ComputationState> =
+let rec private computeLoop (con: Expression) (rep: bool) (body: Instruction list) (state: ComputationState) : EvalResult<ComputationState> =
     let lastExp, env = state
     match eval env con with
-    | Error e -> Error e
-    | Ok 0. -> Ok state
-    | Ok _ -> (compute body state) >>= computeLoop con body
+    | Error e       -> Error e
+    | Ok 0.         -> Ok state
+    | Ok _ when rep -> (compute body state) >>= computeLoop con rep body
+    | Ok _          -> (compute body state)
 
 
 and private computeAssignment (id, exp) (state: ComputationState) : EvalResult<ComputationState> =
@@ -47,8 +48,8 @@ and compute (prog: Instruction list) (state: ComputationState) : EvalResult<Comp
         | FunctionDefinition (id, argNames, body) ->
             computeFunctionDefinition (id, argNames, body) state
             >>= compute tail
-        | Loop (con, body) ->
-            computeLoop con body state
+        | Loop (con, rep, body) ->
+            computeLoop con rep body state
             >>= compute tail
 
 

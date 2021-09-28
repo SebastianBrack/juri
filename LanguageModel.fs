@@ -14,7 +14,7 @@ type Instruction =
     | Expression of Expression
     | Assignment of variableName: Identifier * value: Expression
     | FunctionDefinition of functionName: Identifier * argumentNames: Identifier list * functionBody: Codeblock
-    | Loop of condition: Expression * loopBody: Instruction list
+    | Loop of condition: Expression * repeat: bool * loopBody: Instruction list
 
 
 and Codeblock = Instruction list

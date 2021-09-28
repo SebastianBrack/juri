@@ -80,6 +80,9 @@ let eq =
 let ifloop =
     pstring "if" .>> ws
 
+let repeat =
+    optional (pstring "repeat") .>> ws |>> (function | [] -> false | _ -> true)
+
 let def =
     pstring "def" .>> ws
 
@@ -188,10 +191,10 @@ let private functionDefinition =
 
 
 let private loop =
-    ifloop >>. expression
+    ifloop >>. expression .>>. repeat
     .>> newlineEOS .>> emptyLines
     .>>. codeblock
-    |>> fun (con, body) -> Loop (con, body)
+    |>> fun ((con, rep), body) -> Loop (con, rep, body)
 
 
 
