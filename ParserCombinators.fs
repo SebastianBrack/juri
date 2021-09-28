@@ -84,6 +84,17 @@ let deferr msg parser =
     |> Parser
 
 
+
+/// <summary>
+/// Updates the context in the char stream according to the given function f
+/// if the parser succseeds
+/// </summary>
+/// <param name="f">
+/// The context generating function. Takes the result of the succeeding parser and the current context and generates a new context.
+/// </param>
+/// <param name="parser">
+/// The parser that you want to do the context update
+/// </param>
 let updateContext f parser =
     fun stream ->
         match run parser stream with
@@ -97,7 +108,9 @@ let updateContext f parser =
     |> Parser
 
 
-let satisfies f parser =
+
+/// The overall Parser succseeds if the given predicate returns true and fails if it returns false
+let satisfies predicate parser =
     fun (stream: CharStream<'c>) ->
         let cOriginal = stream.GetContext()
         let pOriginal = stream.GetPosition()
@@ -105,7 +118,7 @@ let satisfies f parser =
         | Failure (m,e) ->
             Failure (m,e)
         | Succsess (r,c,p) ->
-            match stream.GetContext() |> f r with
+            match stream.GetContext() |> predicate r with
             | false ->
                 stream.SetContext(cOriginal)
                 stream.SetPosition(pOriginal)
