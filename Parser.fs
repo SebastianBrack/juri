@@ -34,9 +34,7 @@ let private ws =
     many (pchar ' ' <|> pchar '\t')
 
 let newline = createNewline<JuriContext> ()
-
 let EOS = createEOS<JuriContext>()
-
 let newlineEOS = either newline EOS
 
 
@@ -54,6 +52,7 @@ let private identifier =
     identifierStart .>>. (many identifierTail)
     .>> ws
     |>> fun (c, cs) -> c :: cs |> String.Concat |> Identifier
+    |> deferr "Es wurde ein Identifier erwartet."
 
 
 
@@ -89,7 +88,7 @@ let openParen =
     pchar '(' .>> ws
 
 let closingParen =
-    pchar ')' .>> ws
+    pchar ')' .>> ws |> deferr "Es fehlt eine schließende Klammer"
 
 
 // expressions
@@ -109,7 +108,7 @@ let private number =
     (optional sign) .>>. (many1 digit) .>>. (optional punctuation) .>>. (many digit)
     |>> fun (((s,ds),p),ds2) -> s@ds@p@ds2 |> List.map string |> List.reduce ( + ) |> float |> LiteralNumber
     .>> ws
-    |> deferr "Expected a Number!"
+    |> deferr "Eine Zahl wurde erwartet."
 
 
 
@@ -120,7 +119,8 @@ let private variableReference =
 
 
 let private functionCall =
-    identifier .>> openParen .>>. (many1 expression) .>> closingParen
+    identifier .>> openParen .>>. (many1 expression)
+    .>> (closingParen |> failAsFatal)
     |>> FunctionCall
 
 
@@ -135,7 +135,7 @@ expressionImpl :=
     [binaryOperation; functionCall; variableReference; number]
     |> choice
     .>> ws
-    |> deferr "Kein Ausdruck gefunden."
+    |> deferr "Es wird ein Ausdruck erwartet."
 
 
 
@@ -201,6 +201,7 @@ let private codeblock =
     codeblockStart .>>. (many codeblockRest)
     |>> join2
     |> updateContext (fun _ c -> {c with IndentationStack = c.IndentationStack.Tail})
+    |> deferr "Es fehlt ein Codeblock."
 
 
 
@@ -212,32 +213,40 @@ let private instructionExpression =
 
 
 let private assignment =
-    identifier .>> eq .>>. expression
+    identifier .>> eq
+    .>>. (expression |> failAsFatal)
     .>> newlineEOS .>> emptyLines
     |>> fun (id, exp) -> Assignment (id, exp)
 
 
 
 let private functionDefinition =
-    jfun >>. identifier .>>. (many1 identifier)
+    jfun
+    >>. (identifier |> failAsFatal)
+    .>>. ((many1 identifier) |> failAsFatal)
     .>> newline .>> emptyLines
-    .>>. codeblock
+    .>>. (codeblock |> failAsFatal)
     |>> fun ((id, argNames), body) -> FunctionDefinition (id, argNames, body)
 
 
 
 let private binaryOperatorDefinition =
-    binary >>. operator .>>. identifier .>>. identifier 
+    binary
+    >>. (operator |> failAsFatal)
+    .>>. (identifier |> failAsFatal)
+    .>>. (identifier |> failAsFatal)
     .>> newline .>> emptyLines
-    .>>. codeblock
+    .>>. (codeblock |> failAsFatal)
     |>> fun (((op, left), right), body) -> OperatorDefinition (op, left, right, body)
 
 
 
 let private loop =
-    ifloop >>. expression .>>. repeat
+    ifloop
+    >>. (expression |> failAsFatal)
+    .>>. repeat
     .>> newline .>> emptyLines
-    .>>. codeblock
+    .>>. (codeblock |> failAsFatal)
     |>> fun ((con, rep), body) -> Loop (con, rep, body)
 
 
