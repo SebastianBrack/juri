@@ -21,7 +21,9 @@ let rec private repl (state: ComputationState) =
         compute r state
         |> evalResultPrinter true
         >>= repl
-    | Failure (m,pe) ->
+    | Failure (_) ->
+        repl state
+    | Fatal (_) ->
         repl state
 
 

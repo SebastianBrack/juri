@@ -4,9 +4,14 @@ open System
 open ParserCombinators
 open LanguageModel
 
+type IndentationType =
+    | Tabs
+    | Spaces
+    | Unknown
 
 type JuriContext =
     {
+        IndentationType : IndentationType
         InFunctionDefinition : bool
         InLoop : bool
         IndentationStack : int list
@@ -15,6 +20,7 @@ type JuriContext =
     }
     static member Default =
         {
+            IndentationType = Unknown
             InFunctionDefinition = false
             InLoop = false
             IndentationStack = [0]
@@ -23,36 +29,12 @@ type JuriContext =
         }
 
 
-let parserErrorPrinter (stream: CharStream<'c>) msg (error: ParserError option) =
-    let sourceLine, errorPos =
-        match error with
-        | Some x ->
-            let lineStart = stream.GetChars.[..x] |> Array.findIndexBack (fun c -> c = '\r' || c = '\n')
-            let lineEnd = stream.GetChars.[x..] |> Array.findIndex (fun c -> c = '\r' || c = '\n')
-            let line =
-                stream.GetChars.[lineStart + 1 .. lineEnd - 1]
-                |> String.Concat
-            (line, x - lineStart)
-        | None -> ("", 0)
-
-    Console.ForegroundColor <- ConsoleColor.Red
-    let space = String.replicate errorPos " " 
-    printfn ""
-    printfn "%s" sourceLine
-    printfn "%s^" space
-    printfn "Error: %s" msg
-    printfn ""
-    Console.ResetColor()
-
-
 
 let private ws =
     many (pchar ' ' <|> pchar '\t')
 
 let newline = createNewline<JuriContext> ()
-
 let EOS = createEOS<JuriContext>()
-
 let newlineEOS = either newline EOS
 
 
@@ -70,6 +52,7 @@ let private identifier =
     identifierStart .>>. (many identifierTail)
     .>> ws
     |>> fun (c, cs) -> c :: cs |> String.Concat |> Identifier
+    |> deferr "Es wurde ein Identifier erwartet."
 
 
 
@@ -105,7 +88,7 @@ let openParen =
     pchar '(' .>> ws
 
 let closingParen =
-    pchar ')' .>> ws
+    pchar ')' .>> ws |> deferr "Es fehlt eine schließende Klammer"
 
 
 // expressions
@@ -125,7 +108,7 @@ let private number =
     (optional sign) .>>. (many1 digit) .>>. (optional punctuation) .>>. (many digit)
     |>> fun (((s,ds),p),ds2) -> s@ds@p@ds2 |> List.map string |> List.reduce ( + ) |> float |> LiteralNumber
     .>> ws
-    |> deferr "Expected a Number!"
+    |> deferr "Eine Zahl wurde erwartet."
 
 
 
@@ -136,7 +119,8 @@ let private variableReference =
 
 
 let private functionCall =
-    identifier .>> openParen .>>. (many1 expression) .>> closingParen
+    identifier .>> openParen .>>. (many1 expression)
+    .>> (closingParen |> failAsFatal)
     |>> FunctionCall
 
 
@@ -151,7 +135,7 @@ expressionImpl :=
     [binaryOperation; functionCall; variableReference; number]
     |> choice
     .>> ws
-    |> deferr "Kein Ausdruck gefunden."
+    |> deferr "Es wird ein Ausdruck erwartet."
 
 
 
@@ -167,8 +151,40 @@ let emptyLines =
 
 let private codeblock =
 
+    let countTabsAndSpaces (chars: char list) =
+        let mutable tabs = 0
+        let mutable spaces = 0
+        chars |> List.iter (function | '\t' -> tabs <- tabs + 1 | ' ' -> spaces <- spaces + 1 | _ -> ())
+        (tabs, spaces)
+
+
     let indentation =
-        ws |>> List.length
+        fun (stream: CharStream<JuriContext>) ->
+            let posStart = stream.GetPosition()
+            match run (ws |>> countTabsAndSpaces) stream with
+            | Failure (m,e) -> Failure (m,e)
+            | Fatal (m,e)   -> Fatal (m,e)
+            | Succsess ((tabs,spaces),c,p) ->
+                match (tabs, spaces, c.IndentationType) with
+                | (t,0,Unknown) ->
+                    let newContext = {stream.GetContext() with IndentationType = Tabs}
+                    stream.SetPosition(p)
+                    Succsess (t,newContext,p)
+                | (t,0,Tabs) ->
+                    stream.SetPosition(p)
+                    Succsess (t,c,p)
+                | (0,s,Unknown) ->
+                    let newContext = {stream.GetContext() with IndentationType = Spaces}
+                    stream.SetPosition(p)
+                    Succsess (s,newContext,p)
+                | (0,s,Spaces) ->
+                    stream.SetPosition(p)
+                    Succsess (s,c,p)
+                | (t,s,_) ->
+                    let errorMark = (posStart, t + s)
+                    Fatal ("Tabs und Leerzeichen dürfen nicht gemischt werden.", Some errorMark)
+        |> Parser
+
 
     let indentedInstruction =
         indentation .>>. instruction
@@ -185,6 +201,7 @@ let private codeblock =
     codeblockStart .>>. (many codeblockRest)
     |>> join2
     |> updateContext (fun _ c -> {c with IndentationStack = c.IndentationStack.Tail})
+    |> deferr "Es fehlt ein Codeblock."
 
 
 
@@ -196,32 +213,40 @@ let private instructionExpression =
 
 
 let private assignment =
-    identifier .>> eq .>>. expression
+    identifier .>> eq
+    .>>. (expression |> failAsFatal)
     .>> newlineEOS .>> emptyLines
     |>> fun (id, exp) -> Assignment (id, exp)
 
 
 
 let private functionDefinition =
-    jfun >>. identifier .>>. (many1 identifier)
+    jfun
+    >>. (identifier |> failAsFatal)
+    .>>. ((many1 identifier) |> failAsFatal)
     .>> newline .>> emptyLines
-    .>>. codeblock
+    .>>. (codeblock |> failAsFatal)
     |>> fun ((id, argNames), body) -> FunctionDefinition (id, argNames, body)
 
 
 
 let private binaryOperatorDefinition =
-    binary >>. operator .>>. identifier .>>. identifier 
+    binary
+    >>. (operator |> failAsFatal)
+    .>>. (identifier |> failAsFatal)
+    .>>. (identifier |> failAsFatal)
     .>> newline .>> emptyLines
-    .>>. codeblock
+    .>>. (codeblock |> failAsFatal)
     |>> fun (((op, left), right), body) -> OperatorDefinition (op, left, right, body)
 
 
 
 let private loop =
-    ifloop >>. expression .>>. repeat
+    ifloop
+    >>. (expression |> failAsFatal)
+    .>>. repeat
     .>> newline .>> emptyLines
-    .>>. codeblock
+    .>>. (codeblock |> failAsFatal)
     |>> fun ((con, rep), body) -> Loop (con, rep, body)
 
 
@@ -245,8 +270,11 @@ let parseProgramm (text: string) =
     let prog = stream.RunParser(programm)
     match prog with
     | Failure (m,e) ->
-        parserErrorPrinter stream m e
+        stream.PrintError(m,e)
+    | Fatal (m,e) ->
+        stream.PrintError(m,e)
     | Succsess(r,_,_) ->
         //printfn "%A" r
+        //printfn "%A" (stream.GetContext())
         ()
     prog
