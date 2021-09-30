@@ -181,7 +181,7 @@ let private codeblock =
                     stream.SetPosition(p)
                     Succsess (s,c,p)
                 | (t,s,_) ->
-                    let errorMark = posStart, (t + s)
+                    let errorMark = (posStart, t + s)
                     Fatal ("Tabs und Leerzeichen dürfen nicht gemischt werden.", Some errorMark)
         |> Parser
 
