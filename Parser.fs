@@ -73,6 +73,18 @@ let private identifier =
 
 
 
+let private operator =
+
+    let operatorChar =
+        ['+'; '-'; '*'; '/'; '>'; '<'; '.']
+        |> Set |> anyOf
+
+    many1 operatorChar
+    .>> ws
+    |>> (String.Concat >> BinaryOperator)
+
+
+
 // keywords and controll chars
 let eq =
     pchar '=' .>> ws
@@ -85,6 +97,9 @@ let repeat =
 
 let jfun =
     pstring "fun" .>> ws
+
+let binary =
+    pstring "operator" .>> ws
 
 let openParen =
     pchar '(' .>> ws
@@ -126,10 +141,15 @@ let private functionCall =
 
 
 
+let private binaryOperation =
+    (number <|> variableReference <|> functionCall) .>>. operator .>>. expression
+    |>> fun ((left, op), right) -> Binary (op, left, right)
+
+
+
 expressionImpl :=
-    functionCall
-    <|> variableReference
-    <|> number
+    [binaryOperation; functionCall; variableReference; number]
+    |> choice
     .>> ws
     |> deferr "Kein Ausdruck gefunden."
 
@@ -184,22 +204,30 @@ let private assignment =
 
 let private functionDefinition =
     jfun >>. identifier .>>. (many1 identifier)
-    .>> newlineEOS .>> emptyLines
+    .>> newline .>> emptyLines
     .>>. codeblock
     |>> fun ((id, argNames), body) -> FunctionDefinition (id, argNames, body)
 
 
 
+let private binaryOperatorDefinition =
+    binary >>. operator .>>. identifier .>>. identifier 
+    .>> newline .>> emptyLines
+    .>>. codeblock
+    |>> fun (((op, left), right), body) -> OperatorDefinition (op, left, right, body)
+
+
+
 let private loop =
     ifloop >>. expression .>>. repeat
-    .>> newlineEOS .>> emptyLines
+    .>> newline .>> emptyLines
     .>>. codeblock
     |>> fun ((con, rep), body) -> Loop (con, rep, body)
 
 
 
 instructionImpl :=
-    [loop; functionDefinition; assignment; instructionExpression;]
+    [binaryOperatorDefinition; loop; functionDefinition; assignment; instructionExpression;]
     |> choice
 
 

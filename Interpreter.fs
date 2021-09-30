@@ -51,6 +51,9 @@ and compute (prog: Instruction list) (state: ComputationState) : EvalResult<Comp
         | Loop (con, rep, body) ->
             computeLoop con rep body state
             >>= compute tail
+        | OperatorDefinition ((BinaryOperator opName), leftName, rightName, body) ->
+            computeFunctionDefinition (Identifier opName, [leftName; rightName], body) state
+            >>= compute tail
 
 
 and private eval (env: Environment) (exp: Expression) : EvalResult<float> =
@@ -68,6 +71,12 @@ and private eval (env: Environment) (exp: Expression) : EvalResult<float> =
         | Some (Variable _) -> Error (sprintf "%A is keine Funktion sondern eine Variable." id)
         | Some (ProvidedFunction f) -> evalList args env >=> f
         | Some (CustomFunction (argNames, body)) -> evalList args env >=> evalCustomFunction (argNames, body) env
+    | Binary ((BinaryOperator op), left, right) ->
+        match (Map.tryFind (Identifier op) env) with
+        | None -> Error (sprintf "Der Operator %A ist nicht definiert" op)
+        | Some (Variable _) -> Error (sprintf "%A is kein Operator sondern eine Variable." id)
+        | Some (ProvidedFunction f) -> evalList [left;right] env >=> f
+        | Some (CustomFunction (argNames, body)) -> evalList [left;right] env >=> evalCustomFunction (argNames, body) env
 
 
 and private evalList (expList : Expression list) (env: Environment) : EvalResult<float list> =
