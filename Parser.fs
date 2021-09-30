@@ -4,9 +4,14 @@ open System
 open ParserCombinators
 open LanguageModel
 
+type IndentationType =
+    | Tabs
+    | Spaces
+    | Unknown
 
 type JuriContext =
     {
+        IndentationType : IndentationType
         InFunctionDefinition : bool
         InLoop : bool
         IndentationStack : int list
@@ -15,6 +20,7 @@ type JuriContext =
     }
     static member Default =
         {
+            IndentationType = Unknown
             InFunctionDefinition = false
             InLoop = false
             IndentationStack = [0]
@@ -167,8 +173,38 @@ let emptyLines =
 
 let private codeblock =
 
+    let countTabsAndSpaces (chars: char list) =
+        let mutable tabs = 0
+        let mutable spaces = 0
+        chars |> List.iter (function | '\t' -> tabs <- tabs + 1 | ' ' -> spaces <- spaces + 1 | _ -> ())
+        (tabs, spaces)
+
+
     let indentation =
-        ws |>> List.length
+        fun stream ->
+            match run (ws |>> countTabsAndSpaces) stream with
+            | Failure (m,e) -> Failure (m,e)
+            | Fatal (m,e)   -> Fatal (m,e)
+            | Succsess ((tabs,spaces),c,p) ->
+                match (tabs, spaces, c.IndentationType) with
+                | (t,0,Unknown) ->
+                    let newContext = {stream.GetContext() with IndentationType = Tabs}
+                    stream.SetPosition(p)
+                    Succsess (t,newContext,p)
+                | (t,0,Tabs) ->
+                    stream.SetPosition(p)
+                    Succsess (t,c,p)
+                | (0,s,Unknown) ->
+                    let newContext = {stream.GetContext() with IndentationType = Spaces}
+                    stream.SetPosition(p)
+                    Succsess (s,newContext,p)
+                | (0,s,Spaces) ->
+                    stream.SetPosition(p)
+                    Succsess (s,c,p)
+                | _ ->
+                    Fatal ("Tabs und Leerzeichen dürfen nicht gemischt werden.", None)
+        |> Parser
+
 
     let indentedInstruction =
         indentation .>>. instruction
@@ -246,7 +282,10 @@ let parseProgramm (text: string) =
     match prog with
     | Failure (m,e) ->
         parserErrorPrinter stream m e
+    | Fatal (m,e) ->
+        parserErrorPrinter stream m e
     | Succsess(r,_,_) ->
         //printfn "%A" r
+        printfn "%A" (stream.GetContext())
         ()
     prog
