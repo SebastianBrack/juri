@@ -32,6 +32,87 @@ let private buildinPrint : ProvidedFunction =
         Ok 0.
 
 
+let private argError n = Error (sprintf "Diese Funktion erwartet 2 Argumente - es wurden aber %i übergeben" n)
+
+let private plus : ProvidedFunction =
+    fun args ->
+        match args with
+        | [l; r] -> Ok (l + r)
+        | _      -> argError args.Length
+
+let private minus : ProvidedFunction =
+    fun args ->
+        match args with
+        | [l; r] -> Ok (l - r)
+        | _      -> argError args.Length
+
+let private star : ProvidedFunction =
+    fun args ->
+        match args with
+        | [l; r] -> Ok (l * r)
+        | _      -> argError args.Length
+
+let private slash : ProvidedFunction =
+    fun args ->
+        match args with
+        | [l; r] -> Ok (l / r)
+        | _      -> argError args.Length
+
+let private lesser : ProvidedFunction =
+    fun args ->
+        match args with
+        | [l; r] ->
+            if l < r
+                then Ok 1.
+                else Ok 0.
+        | _ -> argError args.Length
+
+let private greater : ProvidedFunction =
+    fun args ->
+        match args with
+        | [l; r] ->
+            if l > r
+                then Ok 1.
+                else Ok 0.
+        | _ -> argError args.Length
+
+let private equalsEquals : ProvidedFunction =
+    fun args ->
+        match args with
+        | [l; r] ->
+            if l = r
+                then Ok 1.
+                else Ok 0.
+        | _ -> argError args.Length
+
+let private bangEquals : ProvidedFunction =
+    fun args ->
+        match args with
+        | [l; r] ->
+            if l <> r
+                then Ok 1.
+                else Ok 0.
+        | _ -> argError args.Length
+
+let private lesserEquals : ProvidedFunction =
+    fun args ->
+        match args with
+        | [l; r] ->
+            if l <= r
+                then Ok 1.
+                else Ok 0.
+        | _ -> argError args.Length
+
+let private greaterEquals : ProvidedFunction =
+    fun args ->
+        match args with
+        | [l; r] ->
+            if l >= r
+                then Ok 1.
+                else Ok 0.
+        | _ -> argError args.Length
+
+
 let createEnvWithCoreLibFunctions () : Environment =
     Map [
         (Identifier "add", ProvidedFunction buildinAdd)
@@ -41,4 +122,14 @@ let createEnvWithCoreLibFunctions () : Environment =
         (Identifier "bnd", ProvidedFunction buildinInBoundarys)
         (Identifier "eq", ProvidedFunction buildinEquals)
         (Identifier "print", ProvidedFunction buildinPrint)
+        (Identifier "+", ProvidedFunction plus)
+        (Identifier "-", ProvidedFunction minus)
+        (Identifier "*", ProvidedFunction star)
+        (Identifier "/", ProvidedFunction slash)
+        (Identifier "==", ProvidedFunction equalsEquals)
+        (Identifier "!=", ProvidedFunction bangEquals)
+        (Identifier "<", ProvidedFunction lesser)
+        (Identifier ">", ProvidedFunction greater)
+        (Identifier "<=", ProvidedFunction lesserEquals)
+        (Identifier ">=", ProvidedFunction lesserEquals)
         ]

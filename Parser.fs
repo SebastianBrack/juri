@@ -59,7 +59,7 @@ let private identifier =
 let private operator =
 
     let operatorChar =
-        ['+'; '-'; '*'; '/'; '>'; '<'; '.']
+        ['+'; '-'; '*'; '/'; '>'; '<'; '.'; '='; '!']
         |> Set |> anyOf
 
     many1 operatorChar
@@ -213,7 +213,8 @@ let private instructionExpression =
 
 
 let private assignment =
-    identifier .>> eq
+    identifier
+    .>> eq
     .>>. (expression |> failAsFatal)
     .>> newlineEOS .>> emptyLines
     |>> fun (id, exp) -> Assignment (id, exp)
