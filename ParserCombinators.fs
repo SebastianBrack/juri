@@ -29,32 +29,33 @@ and CharStream<'ParserContext>(charseq: char seq, context: 'ParserContext) =
     
     member this.PrintError(m, perror) =
         let findLine pos =
-            let lineStartOPT = content.[..pos] |> Array.tryFindIndexBack (fun c -> c = '\r' || c = '\n')
+            let lineStartOPT = content.[..pos - 1] |> Array.tryFindIndexBack (fun c -> c = '\r' || c = '\n')
             let lineEndOPT = content.[pos..] |> Array.tryFindIndex (fun c -> c = '\r' || c = '\n')
 
             let lineStart =
                 match lineStartOPT with
-                | Some x -> x
+                | Some x -> x + 1
                 | None   -> 0
 
             let lineEnd =
                 match lineEndOPT with
-                | Some x -> x
+                | Some x -> x + pos - 1
                 | None   -> content.Length - 1
 
             let line =
-                content.[lineStart + 1 .. lineEnd - 1]
+                content.[lineStart .. lineEnd]
                 |> String.Concat
             (line, pos - lineStart)
 
         let (sourceLine, errorPos), markLength =
             match perror with
             | Some x ->
-                (findLine (fst x), (fst x - snd x + 1))
+                (findLine (fst x), (snd x - fst x))
             | None   ->
                 (findLine (position), 1)
 
         Console.ForegroundColor <- ConsoleColor.Red
+        //eprintfn "spache: %i mark: %i" errorPos markLength
         let space = String.replicate (errorPos) " " 
         let mark  = String.replicate markLength "^"
         printfn ""
