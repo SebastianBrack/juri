@@ -29,28 +29,6 @@ type JuriContext =
         }
 
 
-let parserErrorPrinter (stream: CharStream<'c>) msg (error: ParserError option) =
-    let sourceLine, errorPos =
-        match error with
-        | Some x ->
-            let lineStart = stream.GetChars.[..x] |> Array.findIndexBack (fun c -> c = '\r' || c = '\n')
-            let lineEnd = stream.GetChars.[x..] |> Array.findIndex (fun c -> c = '\r' || c = '\n')
-            let line =
-                stream.GetChars.[lineStart + 1 .. lineEnd - 1]
-                |> String.Concat
-            (line, x - lineStart)
-        | None -> ("", 0)
-
-    Console.ForegroundColor <- ConsoleColor.Red
-    let space = String.replicate errorPos " " 
-    printfn ""
-    printfn "%s" sourceLine
-    printfn "%s^" space
-    printfn "Error: %s" msg
-    printfn ""
-    Console.ResetColor()
-
-
 
 let private ws =
     many (pchar ' ' <|> pchar '\t')
@@ -181,7 +159,8 @@ let private codeblock =
 
 
     let indentation =
-        fun stream ->
+        fun (stream: CharStream<JuriContext>) ->
+            let posStart = stream.GetPosition()
             match run (ws |>> countTabsAndSpaces) stream with
             | Failure (m,e) -> Failure (m,e)
             | Fatal (m,e)   -> Fatal (m,e)
@@ -201,8 +180,9 @@ let private codeblock =
                 | (0,s,Spaces) ->
                     stream.SetPosition(p)
                     Succsess (s,c,p)
-                | _ ->
-                    Fatal ("Tabs und Leerzeichen dürfen nicht gemischt werden.", None)
+                | (t,s,_) ->
+                    let errorMark = posStart, (t + s)
+                    Fatal ("Tabs und Leerzeichen dürfen nicht gemischt werden.", Some errorMark)
         |> Parser
 
 
@@ -281,11 +261,11 @@ let parseProgramm (text: string) =
     let prog = stream.RunParser(programm)
     match prog with
     | Failure (m,e) ->
-        parserErrorPrinter stream m e
+        stream.PrintError(m,e)
     | Fatal (m,e) ->
-        parserErrorPrinter stream m e
+        stream.PrintError(m,e)
     | Succsess(r,_,_) ->
         //printfn "%A" r
-        printfn "%A" (stream.GetContext())
+        //printfn "%A" (stream.GetContext())
         ()
     prog

@@ -6,7 +6,7 @@ open System
 
 type Position = int
 
-type ParserError = Position 
+type ParserError = Position * Position
 
 
 type ParserResult<'ResultType, 'ParserContext> =
@@ -25,6 +25,44 @@ and CharStream<'ParserContext>(charseq: char seq, context: 'ParserContext) =
     let content = Seq.toArray charseq 
     let mutable parserContext = context
     let mutable position : Position = 0
+
+    
+    member this.PrintError(m, perror) =
+        let findLine pos =
+            let lineStartOPT = content.[..pos] |> Array.tryFindIndexBack (fun c -> c = '\r' || c = '\n')
+            let lineEndOPT = content.[pos..] |> Array.tryFindIndex (fun c -> c = '\r' || c = '\n')
+
+            let lineStart =
+                match lineStartOPT with
+                | Some x -> x
+                | None   -> 0
+
+            let lineEnd =
+                match lineEndOPT with
+                | Some x -> x
+                | None   -> content.Length - 1
+
+            let line =
+                content.[lineStart + 1 .. lineEnd - 1]
+                |> String.Concat
+            (line, pos - lineStart)
+
+        let (sourceLine, errorPos), markLength =
+            match perror with
+            | Some x ->
+                (findLine (fst x), (fst x - snd x + 1))
+            | None   ->
+                (findLine (position), 1)
+
+        Console.ForegroundColor <- ConsoleColor.Red
+        let space = String.replicate (errorPos) " " 
+        let mark  = String.replicate markLength "^"
+        printfn ""
+        printfn "%s" sourceLine
+        printfn "%s%s" space mark
+        printfn "Error: %s" m
+        printfn ""
+        Console.ResetColor()
 
 
     member this.RunParser(parser: Parser<'T, 'ParserContext>) =
@@ -338,10 +376,11 @@ let createParserForwarder () =
 let createEOS<'c> () =
     fun (stream: CharStream<_>) ->
         let c: 'c = stream.GetContext()
+        let pos = stream.GetPosition()
         if not stream.HasNext then
-            Succsess ((), c, stream.GetPosition())
+            Succsess ((), c, pos)
         else
-            Failure ("End of stream expected but there is more stuff.", Some (stream.GetPosition()))
+            Failure ("End of stream expected but there is more stuff.", None)
     |> Parser
 
 
@@ -349,14 +388,15 @@ let createEOS<'c> () =
 let createNewline<'c> () =
     fun (stream: CharStream<_>) ->
         let c: 'c = stream.GetContext()
+        let pos = stream.GetPosition()
         if stream.HasNext then
             let nextc = stream.Next
             if nextc = '\n' || nextc = '\r' || nextc = '\u0085' || nextc = '\u2029' || nextc = '\uffff' then
-                Succsess ((), c, stream.GetPosition() + 1)
+                Succsess ((), c, pos + 1)
             elif stream.HasNextN(2) && stream.NextN(2) = [|'\r'; '\n'|] then
-                Succsess ((), c, stream.GetPosition() + 2)
+                Succsess ((), c, pos + 2)
             else
-                Failure ("Expected a new line.", Some (stream.GetPosition()))
+                Failure ("Expected a new line.", None)
         else
             Failure ("Expected a new line but the stream ends.", None)
     |> Parser
@@ -364,11 +404,12 @@ let createNewline<'c> () =
 
 let anyChar () =
     fun (stream: CharStream<_>) ->
+        let pos = stream.GetPosition()
         if not stream.HasNext then
             let message = sprintf "Expected a char but the input stream is empty."
             Failure (message, None)
         else
-            Succsess (stream.Next, stream.GetContext(), stream.GetPosition() + 1)
+            Succsess (stream.Next, stream.GetContext(), pos + 1)
     |> Parser
 
 
@@ -381,7 +422,7 @@ let anyOf (chars: char Set) =
             let nextc = stream.Next
             if not <| Set.contains nextc chars then
                 let message = sprintf "Expected anything of: %A but instead found %c." chars nextc
-                Failure (message, Some(stream.GetPosition()))
+                Failure (message, None)
             else
                 Succsess (nextc, stream.GetContext(), stream.GetPosition() + 1)
     |> Parser
@@ -396,7 +437,7 @@ let pchar c =
             let nextc = stream.Next
             if nextc <> c then
                 let message = sprintf "Expected: %c but instead found %c." c nextc
-                Failure (message, Some(stream.GetPosition()))
+                Failure (message, None)
             else
                 Succsess (c, stream.GetContext(), stream.GetPosition() + 1)
     |> Parser
@@ -411,7 +452,7 @@ let pstring (str: string) =
             let nextstr = stream.NextN(str.Length) |> String.Concat
             if nextstr <> str then
                 let message = sprintf "Expected: \"%s\" but instead found \"%s\"." str nextstr
-                Failure (message, Some (stream.GetPosition()))
+                Failure (message, None)
             else
                 Succsess (str, stream.GetContext(), stream.GetPosition() + str.Length)
     |> Parser
