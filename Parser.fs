@@ -187,19 +187,17 @@ let private codeblock =
         |> Parser
 
 
-    let indentedInstruction =
+    let codeblockHead =
         indentation .>>. instruction
-
-    let codeblockStart =
-        indentedInstruction |> satisfies (fun (level,_) c -> level > c.IndentationStack.Head)
+        |> satisfies (fun (level,_) c -> level > c.IndentationStack.Head)
         |> updateContext (fun (level,_) c -> {c with IndentationStack = level :: c.IndentationStack})
         |>> snd
 
-    let codeblockRest =
-        indentedInstruction |> satisfies (fun (level,_) c -> level = c.IndentationStack.Head)
-        |>> snd
+    let codeblockTail =
+        indentation |> satisfies (fun level c -> level = c.IndentationStack.Head)
+        >>. instruction
     
-    codeblockStart .>>. (many codeblockRest)
+    codeblockHead .>>. (many codeblockTail)
     |>> join2
     |> updateContext (fun _ c -> {c with IndentationStack = c.IndentationStack.Tail})
     |> deferr "Es fehlt ein Codeblock."
