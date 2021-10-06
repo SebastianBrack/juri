@@ -165,7 +165,6 @@ let private codeblock =
             | Failure (m,e) -> Failure (m,e)
             | Fatal (m,e)   -> Fatal (m,e)
             | Succsess ((tabs,spaces),c,p) ->
-                eprintfn "parsed indentation -> tabs: %i spaces: %i" tabs spaces
                 match (tabs, spaces, c.IndentationType) with
                 | (t,0,Unknown) ->
                     let newContext = {stream.GetContext() with IndentationType = Tabs}

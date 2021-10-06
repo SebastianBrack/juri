@@ -155,7 +155,6 @@ let updateContext f parser =
             Fatal (m,e)
         | Succsess (r,c,p) ->
             let newContext = f r c
-            eprintfn "contextUpdate %A" newContext
             stream.SetContext(newContext)
             Succsess (r, newContext, p)
     |> Parser
@@ -393,10 +392,8 @@ let createNewline<'c> () =
         if stream.HasNext then
             let nextc = stream.Next
             if nextc = '\n' || nextc = '\r' || nextc = '\u0085' || nextc = '\u2029' || nextc = '\uffff' then
-                eprintfn "parsed newline"
                 Succsess ((), c, pos + 1)
             elif stream.HasNextN(2) && stream.NextN(2) = [|'\r'; '\n'|] then
-                eprintfn "parsed newline rn"
                 Succsess ((), c, pos + 2)
             else
                 Failure ("Expected a new line.", None)
