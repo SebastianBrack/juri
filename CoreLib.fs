@@ -131,5 +131,5 @@ let createEnvWithCoreLibFunctions () : Environment =
         (Identifier "<", ProvidedFunction lesser)
         (Identifier ">", ProvidedFunction greater)
         (Identifier "<=", ProvidedFunction lesserEquals)
-        (Identifier ">=", ProvidedFunction lesserEquals)
+        (Identifier ">=", ProvidedFunction greaterEquals)
         ]
