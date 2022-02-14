@@ -51,7 +51,7 @@ if i < ?:myList repeat
 ```
 fun snipList :list start end
     i = start
-    if i <= end
+    if i <= end repeat
         print(i:list)
         i = i+1
 ```
