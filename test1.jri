@@ -1,0 +1,17 @@
+s=0
+x=1
+
+
+fun a b c
+	pp=b+c
+	pp+1
+
+if x < 1000 repeat
+	p=x%3
+	p1=x%5
+	k=p*p1
+	if k == 0 
+		s=s+x
+	x=x+1
+print(s)
+print(a(2 3))
