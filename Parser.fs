@@ -59,7 +59,7 @@ let private identifier =
 let private operator =
 
     let operatorChar =
-        ['+'; '-'; '*'; '/'; '>'; '<'; '.'; '='; '!']
+        ['+'; '-'; '*'; '/'; '>'; '<'; '.'; '='; '!'; '%']
         |> Set |> anyOf
 
     many1 operatorChar
