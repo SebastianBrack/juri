@@ -17,7 +17,7 @@
 
 
 # Listen (noch nicht implementiert)
-**Listennahmen** beginnen mit einem ```:```.
+**Listennamen** beginnen mit einem ```:```.
 
 ```
 :myList = [1 2 3 4]
