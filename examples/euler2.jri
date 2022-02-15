@@ -1,0 +1,7 @@
+﻿fst = 1
+snd = 1
+fib = 2
+
+sum = 0
+if fib < 4000000 repeat
+    

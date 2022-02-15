@@ -1,0 +1,6 @@
+s=0
+x=1
+if x < 1000 repeat
+	if 0 == x%2__D_WA
+		s=s+x
+print(s)

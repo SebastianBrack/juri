@@ -6,13 +6,15 @@ open Runtime
 
 
 
-
 let rec private computeLoop (con: Expression) (rep: bool) (body: Instruction list) (state: ComputationState) : EvalResult<ComputationState> =
     let lastExp, env = state
     match eval env con with
     | Error e       -> Error e
     | Ok 0.         -> Ok state
-    | Ok _ when rep -> (compute body state) >>= computeLoop con rep body
+    | Ok _ when rep ->
+            match (compute body state) with
+            | Error e -> Error e
+            | Ok x -> computeLoop con rep body x
     | Ok _          -> (compute body state)
 
 

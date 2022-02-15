@@ -39,6 +39,16 @@ let newlineEOS = either newline EOS
 
 
 
+let digit =
+        "0123456789"
+        |> Set |> anyOf
+
+let integer =
+    many1 digit 
+    //|>> fun cs -> cs |> List.map string |> List.reduce ( + ) |> int
+    |>> (String.Concat >> int)
+    |> deferr "Listenelemente müssen mit einer Ganzahl Indexiert werden."
+
 let private identifier =
 
     let identifierStart =
@@ -56,10 +66,27 @@ let private identifier =
 
 
 
+let private listIdentifier =
+
+    let identifierStart = pchar ':' 
+
+
+    let identifierTail =
+        '_' :: ['a'..'z'] @ ['A'..'Z'] @ ['0'..'9']
+        |> Set |> anyOf
+
+    identifierStart .>>. (many identifierTail)
+    .>> ws
+    |>> fun (c, cs) -> c :: cs |> String.Concat |> ListIdentifier
+    |> deferr "Es wurde ein ListIdentifier erwartet."
+
+
+
+
 let private operator =
 
     let operatorChar =
-        ['+'; '-'; '*'; '/'; '>'; '<'; '.'; '='; '!']
+        ['+'; '-'; '*'; '/'; '>'; '<'; '.'; '='; '!'; '%']
         |> Set |> anyOf
 
     many1 operatorChar
@@ -90,6 +117,11 @@ let openParen =
 let closingParen =
     pchar ')' .>> ws |> deferr "Es fehlt eine schließende Klammer"
 
+let openBracket =
+    pchar '[' .>> ws |> deferr "Es fehlt eine öffnende Klammer"
+
+let closingBracket =
+    pchar ']' .>> ws |> deferr "Es fehlt eine schließende Klammer"
 
 // expressions
 let private expression, expressionImpl = createParserForwarder ()
@@ -100,10 +132,6 @@ let private number =
 
     let punctuation = pchar '.'
     let sign = pchar '-' <|> pchar '+'
-
-    let digit =
-        "0123456789"
-        |> Set |> anyOf
 
     (optional sign) .>>. (many1 digit) .>>. (optional punctuation) .>>. (many digit)
     |>> fun (((s,ds),p),ds2) -> s@ds@p@ds2 |> List.map string |> List.reduce ( + ) |> float |> LiteralNumber
@@ -116,26 +144,38 @@ let private variableReference =
     identifier
     |>> VariableReference
 
-
+let private listReference =
+    listIdentifier
+    |>> ListReference
 
 let private functionCall =
     identifier .>> openParen .>>. (many1 expression)
     .>> (closingParen |> failAsFatal)
     |>> FunctionCall
 
-
+let private listAccess =
+    (number <|> variableReference <|> functionCall) .>>. listIdentifier
+    |>> fun (index, id) -> ListAccess (id, index)
 
 let private binaryOperation =
-    (number <|> variableReference <|> functionCall) .>>. operator .>>. expression
+    (number <|> variableReference <|> functionCall <|> listAccess) .>>. operator .>>. expression
     |>> fun ((left, op), right) -> Binary (op, left, right)
-
+// 1 + 2 + 3 + 4
+// (1+2) + 3
+// 1 + (2+ (3+4))
 
 
 expressionImpl :=
-    [binaryOperation; functionCall; variableReference; number]
+    [binaryOperation; functionCall; listReference; variableReference; listAccess; number]
     |> choice
     .>> ws
     |> deferr "Es wird ein Ausdruck erwartet."
+
+
+
+let private listLiteral = 
+    openBracket >>. (many expression) .>> closingBracket
+    |>> LiteralList
 
 
 
@@ -219,6 +259,25 @@ let private assignment =
 
 
 
+let private listAssignment =
+    listIdentifier
+    .>> eq
+    .>>. (openBracket >>. (many expression) .>> closingBracket |> failAsFatal)
+    .>> newlineEOS .>> emptyLines
+    |>> fun (id, exprs) -> ListAssignment (id, exprs)
+
+
+
+let private listElementAssignment =
+    (number <|> variableReference <|> functionCall)
+    .>>. listIdentifier
+    .>> eq
+    .>>. (expression |> failAsFatal)
+    .>> newlineEOS .>> emptyLines
+    |>> fun ((index, id), exp) -> ListElementAssignment (id, index, exp)
+
+
+
 let private functionDefinition =
     jfun
     >>. (identifier |> failAsFatal)
@@ -251,7 +310,13 @@ let private loop =
 
 
 instructionImpl :=
-    [binaryOperatorDefinition; loop; functionDefinition; assignment; instructionExpression;]
+    [   binaryOperatorDefinition
+        loop
+        functionDefinition
+        assignment
+        listAssignment
+        listElementAssignment
+        instructionExpression ]
     |> choice
 
 
@@ -273,7 +338,7 @@ let parseProgramm (text: string) =
     | Fatal (m,e) ->
         stream.PrintError(m,e)
     | Succsess(r,_,_) ->
-        //printfn "%A" r
+        printfn "%A" r
         //printfn "%A" (stream.GetContext())
         ()
     prog

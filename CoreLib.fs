@@ -1,5 +1,5 @@
 module CoreLib
-
+open System
 open Runtime
 open LanguageModel
 
@@ -7,6 +7,7 @@ let private buildinAdd : ProvidedFunction = List.reduce ( + ) >> Ok
 let private buildinMul : ProvidedFunction = List.reduce ( * ) >> Ok
 let private buildinSub : ProvidedFunction = List.reduce ( - ) >> Ok
 let private buildinDiv : ProvidedFunction = List.reduce ( / ) >> Ok
+
 
 let private buildinEquals : ProvidedFunction =
     fun args ->
@@ -31,6 +32,13 @@ let private buildinPrint : ProvidedFunction =
         | _   -> printfn "%A" args
         Ok 0.
 
+let private buildinPrintChar : ProvidedFunction =
+    fun args ->
+        args
+        |> List.map (fun x -> x |> int |> char)
+        |> String.Concat
+        |> printfn "%s"
+        Ok 0.
 
 let private argError n = Error (sprintf "Diese Funktion erwartet 2 Argumente - es wurden aber %i übergeben" n)
 
@@ -112,6 +120,21 @@ let private greaterEquals : ProvidedFunction =
                 else Ok 0.
         | _ -> argError args.Length
 
+let private modulo : ProvidedFunction =
+   
+    fun args ->
+        match args with
+        | [l; r] -> Ok (l % r)
+        | _      -> argError args.Length
+
+let private pow : ProvidedFunction =
+   
+    fun args ->
+        match args with
+        | [l; r] -> Ok (l ** r)
+        | _      -> argError args.Length
+
+
 
 let createEnvWithCoreLibFunctions () : Environment =
     Map [
@@ -122,6 +145,7 @@ let createEnvWithCoreLibFunctions () : Environment =
         (Identifier "bnd", ProvidedFunction buildinInBoundarys)
         (Identifier "eq", ProvidedFunction buildinEquals)
         (Identifier "print", ProvidedFunction buildinPrint)
+        (Identifier "printc", ProvidedFunction buildinPrintChar)
         (Identifier "+", ProvidedFunction plus)
         (Identifier "-", ProvidedFunction minus)
         (Identifier "*", ProvidedFunction star)
@@ -132,4 +156,6 @@ let createEnvWithCoreLibFunctions () : Environment =
         (Identifier ">", ProvidedFunction greater)
         (Identifier "<=", ProvidedFunction lesserEquals)
         (Identifier ">=", ProvidedFunction greaterEquals)
+        (Identifier "%", ProvidedFunction modulo)
+        (Identifier "**", ProvidedFunction pow)
         ]
