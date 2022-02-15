@@ -1,0 +1,13 @@
+﻿fun or l r
+    l + r    
+
+sum = 0
+x = 0
+if x < 1000 repeat
+    divisibleBy_3 = 0 == x % 3
+    divisibleBy_5 = 0 == x % 5
+    if or(divisibleBy_3 divisibleBy_5)
+        sum = sum + x
+    x = x+1
+    
+print(sum)

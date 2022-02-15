@@ -13,5 +13,7 @@
     <Compile Include="Repl.fs" />
     <Compile Include="CLI.fs" />
     <Compile Include="Program.fs" />
+    <Content Include="examples\euler1.jri" />
+    <Content Include="examples\euler2.jri" />
   </ItemGroup>
 </Project>
