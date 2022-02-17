@@ -1,4 +1,4 @@
-module Internal.Runtime
+module Juri.Internal.Runtime
 
 open System
 open LanguageModel

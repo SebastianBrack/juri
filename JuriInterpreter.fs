@@ -1,11 +1,11 @@
-﻿namespace API
+﻿namespace Juri.Api 
 
-open Internal
-open Internal.LanguageModel
-open Internal.Parser
-open Internal.Runtime
-open Internal.CoreLib
-open Internal.Interpreter
+open Juri.Internal
+open Juri.Internal.LanguageModel
+open Juri.Internal.Parser
+open Juri.Internal.Runtime
+open Juri.Internal.CoreLib
+open Juri.Internal.Interpreter
 
 
 type public Interpreter() =

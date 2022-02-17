@@ -1,4 +1,4 @@
-module Internal.CoreLib
+module Juri.Internal.CoreLib
 
 open System
 open Runtime

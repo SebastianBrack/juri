@@ -1,4 +1,4 @@
-module Internal.Interpreter
+module Juri.Internal.Interpreter
 
 open System
 open LanguageModel

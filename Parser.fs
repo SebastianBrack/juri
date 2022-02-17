@@ -1,4 +1,4 @@
-module Internal.Parser
+module Juri.Internal.Parser
 
 open System
 open ParserCombinators

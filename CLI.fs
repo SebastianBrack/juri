@@ -1,12 +1,12 @@
-module Internal.CLI
+module Juri.Internal.CLI
 
-open Internal.Repl
-open Internal.Parser
-open Internal.ParserCombinators
+open Repl
+open Parser
+open ParserCombinators
 open System.IO
-open Internal.Interpreter
-open Internal.CoreLib
-open Internal.Runtime
+open Interpreter
+open CoreLib
+open Runtime
 
 let private runScript script =
     let initialState : ComputationState = (None, createEnvWithCoreLibFunctions())

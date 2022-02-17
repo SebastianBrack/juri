@@ -1,4 +1,4 @@
-module Internal.LanguageModel
+module Juri.Internal.LanguageModel
 
 
 type Identifier = Identifier of string

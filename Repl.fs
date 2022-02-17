@@ -1,4 +1,4 @@
-module Internal.Repl
+module Juri.Internal.Repl
 
 open Interpreter
 open CoreLib
