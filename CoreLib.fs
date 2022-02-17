@@ -76,6 +76,16 @@ let private lesser : ProvidedFunction =
                 else Ok 0.
         | _ -> argError args.Length
 
+let private juri : ProvidedFunction =
+    fun args ->
+        match args with
+        | [l; r] ->
+            let rnd = Random(Environment.TickCount)
+            if rnd.Next(100) > 50
+                then Ok 1.
+                else Ok 0.
+        | _ -> argError args.Length
+
 let private greater : ProvidedFunction =
     fun args ->
         match args with
@@ -159,4 +169,5 @@ let createEnvWithCoreLibFunctions () : Environment =
         (Identifier ">=", ProvidedFunction greaterEquals)
         (Identifier "%", ProvidedFunction modulo)
         (Identifier "**", ProvidedFunction pow)
+        (Identifier "??", ProvidedFunction juri)
         ]

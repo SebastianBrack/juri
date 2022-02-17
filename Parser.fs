@@ -86,7 +86,7 @@ let private listIdentifier =
 let private operator =
 
     let operatorChar =
-        ['+'; '-'; '*'; '/'; '>'; '<'; '.'; '='; '!'; '%']
+        ['+'; '-'; '*'; '/'; '>'; '<'; '.'; '='; '!'; '%'; '?']
         |> Set |> anyOf
 
     many1 operatorChar
@@ -338,7 +338,7 @@ let parseProgram (text: string) =
     | Fatal (m,e) ->
         stream.PrintError(m,e)
     | Success(r,_,_) ->
-        printfn "%A" r
+        //printfn "%A" r
         //printfn "%A" (stream.GetContext())
         ()
     prog
