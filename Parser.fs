@@ -1,4 +1,4 @@
-module Parser
+module Internal.Parser
 
 open System
 open ParserCombinators
@@ -204,22 +204,22 @@ let private codeblock =
             match run (ws |>> countTabsAndSpaces) stream with
             | Failure (m,e) -> Failure (m,e)
             | Fatal (m,e)   -> Fatal (m,e)
-            | Succsess ((tabs,spaces),c,p) ->
+            | Success ((tabs,spaces),c,p) ->
                 match (tabs, spaces, c.IndentationType) with
                 | (t,0,Unknown) ->
                     let newContext = {stream.GetContext() with IndentationType = Tabs}
                     stream.SetPosition(p)
-                    Succsess (t,newContext,p)
+                    Success (t,newContext,p)
                 | (t,0,Tabs) ->
                     stream.SetPosition(p)
-                    Succsess (t,c,p)
+                    Success (t,c,p)
                 | (0,s,Unknown) ->
                     let newContext = {stream.GetContext() with IndentationType = Spaces}
                     stream.SetPosition(p)
-                    Succsess (s,newContext,p)
+                    Success (s,newContext,p)
                 | (0,s,Spaces) ->
                     stream.SetPosition(p)
-                    Succsess (s,c,p)
+                    Success (s,c,p)
                 | (t,s,_) ->
                     let errorMark = (posStart, t + s)
                     Fatal ("Tabs und Leerzeichen dürfen nicht gemischt werden.", Some errorMark)
@@ -321,7 +321,7 @@ instructionImpl :=
 
 
 
-let private programm =
+let private program =
     emptyLines
     >>. many1 instruction
     .>> emptyLines
@@ -329,15 +329,15 @@ let private programm =
 
 
 
-let parseProgramm (text: string) =
+let parseProgram (text: string) =
     let stream = CharStream(text, JuriContext.Default)
-    let prog = stream.RunParser(programm)
+    let prog = stream.RunParser(program)
     match prog with
     | Failure (m,e) ->
         stream.PrintError(m,e)
     | Fatal (m,e) ->
         stream.PrintError(m,e)
-    | Succsess(r,_,_) ->
+    | Success(r,_,_) ->
         printfn "%A" r
         //printfn "%A" (stream.GetContext())
         ()

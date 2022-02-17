@@ -1,4 +1,5 @@
-module CoreLib
+module Internal.CoreLib
+
 open System
 open Runtime
 open LanguageModel

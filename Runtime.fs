@@ -1,4 +1,4 @@
-module Runtime
+module Internal.Runtime
 
 open System
 open LanguageModel

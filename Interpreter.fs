@@ -1,4 +1,4 @@
-module Interpreter
+module Internal.Interpreter
 
 open System
 open LanguageModel

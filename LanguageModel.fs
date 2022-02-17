@@ -1,4 +1,4 @@
-module LanguageModel
+module Internal.LanguageModel
 
 
 type Identifier = Identifier of string

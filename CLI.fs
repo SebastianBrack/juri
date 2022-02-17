@@ -1,17 +1,18 @@
-module CLI
+module Internal.CLI
 
-open Repl
-open Parser
+open Internal.Repl
+open Internal.Parser
+open Internal.ParserCombinators
 open System.IO
-open Interpreter
-open CoreLib
-open Runtime
+open Internal.Interpreter
+open Internal.CoreLib
+open Internal.Runtime
 
 let private runScript script =
     let initialState : ComputationState = (None, createEnvWithCoreLibFunctions())
-    let prog = parseProgramm (script + "\n")
-    match parseProgramm (script+"\n") with
-    | ParserCombinators.Succsess (r,_,_) -> 
+    let prog = parseProgram (script + "\n")
+    match parseProgram (script+"\n") with
+    | Success (r,_,_) -> 
         compute r initialState |> ignore
         0
     | _ -> (); 0
