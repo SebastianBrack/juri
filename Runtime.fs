@@ -1,6 +1,7 @@
 module Juri.Internal.Runtime
 
 open System
+open Output
 open LanguageModel
 
 
@@ -18,21 +19,24 @@ type EvalResult<'T> =
 
 
 type ProvidedFunction =
-    float list -> EvalResult<float>
+    float list * ComputationState -> EvalResult<float> * ComputationState
 
 
-type EnvironmentObject =
+and EnvironmentObject =
     | Variable of float
     | CustomFunction of expectedArguments: Identifier list * functionBody: Instruction list
     | ProvidedFunction of ProvidedFunction
 
 
-type Environment =
+and Environment =
     Map<Identifier, EnvironmentObject>
 
 
-type ComputationState =
-    float Option * Environment
+and ComputationState = {
+    LastExpression: float Option
+    Environment: Environment
+    OutputStreams: InterpreterOutput
+}
 
 
 let errorPrinter msg =

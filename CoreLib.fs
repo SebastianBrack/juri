@@ -4,10 +4,18 @@ open System
 open Runtime
 open LanguageModel
 
-let private buildinAdd : ProvidedFunction = List.reduce ( + ) >> Ok
-let private buildinMul : ProvidedFunction = List.reduce ( * ) >> Ok
-let private buildinSub : ProvidedFunction = List.reduce ( - ) >> Ok
-let private buildinDiv : ProvidedFunction = List.reduce ( / ) >> Ok
+let private buildinAdd (args, state): ProvidedFunction =
+    let result = args |> List.reduce ( + ) |> Ok
+    result * state
+let private buildinMul (args, state) : ProvidedFunction =
+       let result = args |> List.reduce ( * ) |> Ok
+       result * state
+let private buildinSub (args, state) : ProvidedFunction =
+    let result = args |> List.reduce ( - ) |> Ok
+    result * state
+let private buildinDiv (args, state) : ProvidedFunction =
+    let result = args |> List.reduce ( / ) |> Ok
+    result * state
 
 
 let private buildinEquals : ProvidedFunction =
