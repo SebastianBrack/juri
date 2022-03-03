@@ -15,8 +15,8 @@ type public Interpreter() =
     let mutable outputStreams = InterpreterOutput()
     member this.GetOutputStreams() = outputStreams
     member this.ParsingOk() = parsingOK
-    member this.ParseJuriProgram(code: string) =
-        let parsingResult = parseProgram (code + "\n")
+    member this.ParseJuriProgram(code: char seq) =
+        let parsingResult = parseProgram (Seq.append "\n" code)
         match parsingResult with
         | ParserCombinators.Success(instructions, _, _) ->
             program <- instructions
