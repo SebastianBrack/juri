@@ -2,6 +2,7 @@ module Juri.Internal.Repl
 
 open Interpreter
 open CoreLib
+open Juri.Internal.Output
 open Runtime
 open Parser
 open ParserCombinators
@@ -29,5 +30,5 @@ let rec private repl (state: ComputationState) =
 
 
 let startRepl () =
-    let initialState : ComputationState = (None, createEnvWithCoreLibFunctions())
+    let initialState : ComputationState = (None, createEnvWithCoreLibFunctions(), InterpreterOutput())
     repl initialState

@@ -5,21 +5,22 @@ open Output
 open LanguageModel
 
 
-type EvalResult<'T> =
+type InterpreterResult<'T> =
     | Ok of 'T
     | Error of string
-    static member (>>=) (a, f: 'a -> EvalResult<'a>)=
+    static member (>>=) (a, f: 'a -> InterpreterResult<'b>)=
         match a with
         | Error e -> Error e
         | Ok x -> f x
-    static member (>=>) (a: EvalResult<'a>, f: 'a -> EvalResult<'b>) =
-        match a with
-        | Error e -> Error e
-        | Ok x -> f x
+    static member (>=>) (f: 'a -> InterpreterResult<'b>, g: 'b -> InterpreterResult<'c>) =
+        fun a ->
+            match f a with
+            | Error e -> Error e
+            | Ok x -> g x
 
 
 type ProvidedFunction =
-    float list * ComputationState -> EvalResult<float> * ComputationState
+    InterpreterOutput -> float list -> InterpreterResult<float>
 
 
 and EnvironmentObject =
@@ -32,11 +33,7 @@ and Environment =
     Map<Identifier, EnvironmentObject>
 
 
-and ComputationState = {
-    LastExpression: float Option
-    Environment: Environment
-    OutputStreams: InterpreterOutput
-}
+and ComputationState = float Option * Environment * InterpreterOutput
 
 
 let errorPrinter msg =
@@ -46,7 +43,7 @@ let errorPrinter msg =
     Console.ResetColor()
 
 
-let evalResultPrinter printOnlyErrors (exp: EvalResult<'a>) =
+let evalResultPrinter printOnlyErrors (exp: InterpreterResult<'a>) =
     match exp with
     | Error e ->
         errorPrinter e

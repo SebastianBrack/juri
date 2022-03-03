@@ -4,22 +4,14 @@ open System
 open Runtime
 open LanguageModel
 
-let private buildinAdd (args, state): ProvidedFunction =
-    let result = args |> List.reduce ( + ) |> Ok
-    result * state
-let private buildinMul (args, state) : ProvidedFunction =
-       let result = args |> List.reduce ( * ) |> Ok
-       result * state
-let private buildinSub (args, state) : ProvidedFunction =
-    let result = args |> List.reduce ( - ) |> Ok
-    result * state
-let private buildinDiv (args, state) : ProvidedFunction =
-    let result = args |> List.reduce ( / ) |> Ok
-    result * state
+let private buildinAdd : ProvidedFunction = fun _ args -> args |> List.reduce ( + ) |> Ok
+let private buildinMul : ProvidedFunction = fun _ args -> args |> List.reduce ( * ) |> Ok
+let private buildinSub : ProvidedFunction = fun _ args -> args |> List.reduce ( - ) |> Ok
+let private buildinDiv : ProvidedFunction = fun _ args -> args |> List.reduce ( / ) |> Ok
 
 
 let private buildinEquals : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [] | [_] -> Error (sprintf "Diese Funktion erwartet mindestens 2 Argumente - es wurden aber %i übergeben" args.Length)
         | head :: tail ->
@@ -28,55 +20,60 @@ let private buildinEquals : ProvidedFunction =
                 else Ok 0.
 
 let private buildinInBoundarys : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [a;b]   -> if a < b then Ok 1. else Ok 0.
         | [a;b;c] -> if a <= b && b < c then Ok 1. else Ok 0.
         | _       -> Error (sprintf "Diese Funktion erwartet 2 oder 3 Argumente - es wurden aber %i übergeben." args.Length)
 
 let private buildinPrint : ProvidedFunction =
-    fun args ->
-        match args with
-        | [x] -> printfn "%A" x
-        | _   -> printfn "%A" args
+    fun out args ->
+        let outputString =
+            args
+            |> List.map (fun x -> sprintf "%f " x)
+            |> String.Concat
+            |> sprintf "%s\n"
+        out.Standard.Write(outputString)
         Ok 0.
 
 let private buildinPrintChar : ProvidedFunction =
-    fun args ->
-        args
-        |> List.map (fun x -> x |> int |> char)
-        |> String.Concat
-        |> printfn "%s"
+    fun out args ->
+        let outputString =
+            args
+            |> List.map (fun x -> x |> int |> char)
+            |> String.Concat
+            |> sprintf "%s\n"
+        out.Standard.Write(outputString)
         Ok 0.
 
 let private argError n = Error (sprintf "Diese Funktion erwartet 2 Argumente - es wurden aber %i übergeben" n)
 
 let private plus : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] -> Ok (l + r)
         | _      -> argError args.Length
 
 let private minus : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] -> Ok (l - r)
         | _      -> argError args.Length
 
 let private star : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] -> Ok (l * r)
         | _      -> argError args.Length
 
 let private slash : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] -> Ok (l / r)
         | _      -> argError args.Length
 
 let private lesser : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] ->
             if l < r
@@ -85,7 +82,7 @@ let private lesser : ProvidedFunction =
         | _ -> argError args.Length
 
 let private greater : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] ->
             if l > r
@@ -94,7 +91,7 @@ let private greater : ProvidedFunction =
         | _ -> argError args.Length
 
 let private equalsEquals : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] ->
             if l = r
@@ -103,7 +100,7 @@ let private equalsEquals : ProvidedFunction =
         | _ -> argError args.Length
 
 let private bangEquals : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] ->
             if l <> r
@@ -112,7 +109,7 @@ let private bangEquals : ProvidedFunction =
         | _ -> argError args.Length
 
 let private lesserEquals : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] ->
             if l <= r
@@ -121,7 +118,7 @@ let private lesserEquals : ProvidedFunction =
         | _ -> argError args.Length
 
 let private greaterEquals : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] ->
             if l >= r
@@ -130,15 +127,13 @@ let private greaterEquals : ProvidedFunction =
         | _ -> argError args.Length
 
 let private modulo : ProvidedFunction =
-   
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] -> Ok (l % r)
         | _      -> argError args.Length
 
 let private pow : ProvidedFunction =
-   
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] -> Ok (l ** r)
         | _      -> argError args.Length
