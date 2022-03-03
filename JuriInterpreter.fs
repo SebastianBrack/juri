@@ -11,16 +11,22 @@ open Juri.Internal.Interpreter
 
 type public Interpreter() =
     let mutable program : Instruction list = []
-    let mutable parsingOK = true
+    let mutable parsingOK = false
     let mutable outputStreams = InterpreterOutput()
+    member this.GetOutputStreams() = outputStreams
+    member this.ParsingOk() = parsingOK
     member this.ParseJuriProgram(code: string) =
         let parsingResult = parseProgram (code + "\n")
         match parsingResult with
         | ParserCombinators.Success(instructions, _, _) ->
             program <- instructions
             parsingOK <- true
-        | _ -> parsingOK <- false
-       
+        | ParserCombinators.Failure(msg, _) ->
+            parsingOK <- false
+            outputStreams.Error.Write(msg)
+        | ParserCombinators.Fatal(msg, _) ->
+            parsingOK <- false
+            outputStreams.Error.Write(msg)
     member this.ExecuteProgram() =
         let initialState : ComputationState = (None, createEnvWithCoreLibFunctions(), outputStreams)
         match compute program initialState with
