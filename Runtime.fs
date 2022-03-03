@@ -1,38 +1,39 @@
-module Internal.Runtime
+module Juri.Internal.Runtime
 
 open System
+open Output
 open LanguageModel
 
 
-type EvalResult<'T> =
+type InterpreterResult<'T> =
     | Ok of 'T
     | Error of string
-    static member (>>=) (a, f: 'a -> EvalResult<'a>)=
+    static member (>>=) (a, f: 'a -> InterpreterResult<'b>)=
         match a with
         | Error e -> Error e
         | Ok x -> f x
-    static member (>=>) (a: EvalResult<'a>, f: 'a -> EvalResult<'b>) =
-        match a with
-        | Error e -> Error e
-        | Ok x -> f x
+    static member (>=>) (f: 'a -> InterpreterResult<'b>, g: 'b -> InterpreterResult<'c>) =
+        fun a ->
+            match f a with
+            | Error e -> Error e
+            | Ok x -> g x
 
 
 type ProvidedFunction =
-    float list -> EvalResult<float>
+    InterpreterOutput -> float list -> InterpreterResult<float>
 
 
-type EnvironmentObject =
+and EnvironmentObject =
     | Variable of float
     | CustomFunction of expectedArguments: Identifier list * functionBody: Instruction list
     | ProvidedFunction of ProvidedFunction
 
 
-type Environment =
+and Environment =
     Map<Identifier, EnvironmentObject>
 
 
-type ComputationState =
-    float Option * Environment
+and ComputationState = float Option * Environment * InterpreterOutput
 
 
 let errorPrinter msg =
@@ -42,7 +43,7 @@ let errorPrinter msg =
     Console.ResetColor()
 
 
-let evalResultPrinter printOnlyErrors (exp: EvalResult<'a>) =
+let evalResultPrinter printOnlyErrors (exp: InterpreterResult<'a>) =
     match exp with
     | Error e ->
         errorPrinter e

@@ -1,4 +1,4 @@
-module Internal.ParserCombinators
+module Juri.Internal.ParserCombinators
 
 
 open System
@@ -11,8 +11,8 @@ type ParserError = Position * Position
 
 type ParserResult<'ResultType, 'ParserContext> =
     | Success of 'ResultType * 'ParserContext * Position 
-    | Failure  of string * ParserError option
-    | Fatal    of string * ParserError option
+    | Failure of string * ParserError option
+    | Fatal   of string * ParserError option
 
 let isSuccess = function | Success _ -> true  | Failure _ -> false | Fatal _ -> false
 let isFailure  = function | Success _ -> false | Failure _ -> true  | Fatal _ -> true

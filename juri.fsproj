@@ -6,6 +6,7 @@
   <ItemGroup>
     <Compile Include="ParserCombinators.fs" />
     <Compile Include="LanguageModel.fs" />
+    <Compile Include="JuriOutput.fs" />
     <Compile Include="Runtime.fs" />
     <Compile Include="CoreLib.fs" />
     <Compile Include="Interpreter.fs" />

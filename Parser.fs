@@ -1,4 +1,4 @@
-module Internal.Parser
+module Juri.Internal.Parser
 
 open System
 open ParserCombinators
@@ -329,7 +329,7 @@ let private program =
 
 
 
-let parseProgram (text: string) =
+let parseProgram (text: char seq) =
     let stream = CharStream(text, JuriContext.Default)
     let prog = stream.RunParser(program)
     match prog with
