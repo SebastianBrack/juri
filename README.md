@@ -4,6 +4,8 @@
 * repeat
 * fun
 * operator
+* as
+* iterate
 
 ### Operator-Zeichen:
 ```

@@ -1,0 +1,25 @@
+
+PERIMETER = 1000
+PERIMETER1 = 1001
+a=1
+b=0
+c=0
+if a < PERIMETER1 repeat
+    pen=a
+    b=pen+1
+    if b < PERIMETER1 repeat
+        c1=PERIMETER-a
+        c=c1-b
+        
+        f=a*a
+        f1=b*b
+        first=f+f1
+        second=c*c
+        if first == second
+            print(a*b*c)
+            a=PERIMETER1
+            b=PERIMETER1 
+           
+        b=b+1
+    
+    a=a+1

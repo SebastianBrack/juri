@@ -1,0 +1,19 @@
+
+fun comp a
+    i = 1
+    i1 = 1
+    n = 100
+    s = 0
+    s2 = 0
+    
+    if i < n+1 repeat
+        s=s+i
+        i=i+1
+    if i1 < n+1 repeat
+        temp=i1**2
+        s2=s2+temp
+        i1=i1+1
+    s=s**2
+    s - s2  
+
+print(comp(1))
