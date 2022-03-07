@@ -1,6 +1,6 @@
 module Juri.Internal.CLI
 
-open Juri.Internal.Output
+open Juri.Internal.OutputWriter
 open Repl
 open Parser
 open ParserCombinators
@@ -10,12 +10,20 @@ open CoreLib
 open Runtime
 
 let private runScript script =
-    let initialState : ComputationState = (None, createEnvWithCoreLibFunctions(), InterpreterOutput())
+    let outputWriter : IOutputWriter = ConsoleWriter()
+    let initialState : ComputationState = (None, createEnvWithCoreLibFunctions())
     match parseProgram (script+"\n") with
     | Success (r,_,_) -> 
-        compute r initialState |> ignore
+        compute r outputWriter initialState
+        |> evalResultPrinter false outputWriter
+        |> ignore
         0
-    | _ -> (); 0
+    | Failure (msg, _) ->
+        outputWriter.WriteERR(msg)
+        0
+    | Fatal (msg, _) ->
+        outputWriter.WriteERR(msg)
+        0
 
 let run argv =
     match argv with

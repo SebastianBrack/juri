@@ -331,14 +331,16 @@ let private program =
 
 let parseProgram (text: char seq) =
     let stream = CharStream(text, JuriContext.Default)
-    let prog = stream.RunParser(program)
-    match prog with
+    let parsingResult = stream.RunParser(program)
+    match parsingResult with
     | Failure (m,e) ->
-        stream.PrintError(m,e)
+        //stream.PrintError(m,e)
+        ()
     | Fatal (m,e) ->
-        stream.PrintError(m,e)
+        //stream.PrintError(m,e)
+        ()
     | Success(r,_,_) ->
         //printfn "%A" r
         //printfn "%A" (stream.GetContext())
         ()
-    prog
+    parsingResult
