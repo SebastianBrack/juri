@@ -14,7 +14,6 @@ let rec private computeLoop
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
-    let lastExp, env = state
     match eval outputWriter state con with
     | Error e       -> Error e
     | Ok 0.         -> Ok state
@@ -30,7 +29,7 @@ and private computeAssignment
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
-    let lastExp, env = state
+    let _, env = state
     let addVariableToState x =
         let newEnv = env |> Map.add id (Variable x)
         Ok (Some x, newEnv)
@@ -57,7 +56,7 @@ and compute
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
-    let lastExp, env = state
+    let _, env = state
     match prog with
     | [] -> Ok state
     | instruction :: tail ->
@@ -85,7 +84,7 @@ and private eval
         (state: ComputationState)
         (exp: Expression) : InterpreterResult<float> =
     
-    let lastExp, env = state
+    let _, env = state
     match exp with
     | LiteralNumber x -> Ok x
     | VariableReference id ->
@@ -100,7 +99,7 @@ and private eval
         | Some (Variable _) -> Error (sprintf "%A is keine Funktion sondern eine Variable." id)
         | Some (ProvidedFunction f) -> evalList args outputWriter state >>= (f outputWriter)
         | Some (CustomFunction (argNames, body)) -> evalList args outputWriter state >>= evalCustomFunction (argNames, body) outputWriter state
-    | Binary ((BinaryOperator op), left, right) ->
+    | Binary (BinaryOperator op, left, right) ->
         match (Map.tryFind (Identifier op) env) with
         | None -> Error (sprintf "Der Operator %A ist nicht definiert" op)
         | Some (Variable _) -> Error (sprintf "%A is kein Operator sondern eine Variable." id)
@@ -113,7 +112,6 @@ and private evalList
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<float list> =
     
-    let lastExp, env = state
     let appender results elem =
         match results, elem with
         | Error _, _ -> results
@@ -129,7 +127,7 @@ and private evalCustomFunction
         (outputWriter: IOutputWriter)
         (state: ComputationState)
         (args: float list) : InterpreterResult<float> =
-    let lastExp, env = state
+    let _, env = state
     if argNames.Length <> args.Length then
         Error (sprintf "Diese Funktion erwarte %i Argumente - es wurden aber %i übergeben." argNames.Length args.Length)
     else
