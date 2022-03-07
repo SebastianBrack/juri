@@ -15,14 +15,14 @@ type ConsoleWriter() =
     interface IOutputWriter with
         member this.WriteSTD(msg) =
             Console.ResetColor()
-            printfn $"{msg}"
+            printf $"{msg}"
         member this.WriteERR(msg) =
             Console.ForegroundColor <- ConsoleColor.Red
-            printfn $"{msg}"
+            printf $"{msg}"
             Console.ResetColor()
         member this.WriteMET(msg) =
             Console.ForegroundColor <- ConsoleColor.DarkCyan
-            printfn $"{msg}"
+            printf $"{msg}"
             Console.ResetColor()
             
             
