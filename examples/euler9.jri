@@ -8,8 +8,7 @@ if a < PERIMETER1 repeat
     pen=a
     b=pen+1
     if b < PERIMETER1 repeat
-        c1=PERIMETER-a
-        c=c1-b
+        c=PERIMETER-a+b
         
         f=a*a
         f1=b*b
