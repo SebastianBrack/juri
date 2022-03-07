@@ -15,10 +15,12 @@ type OutputStream() =
         
     
     
-type InterpreterOutput() =
+type InterpreterOutputStreams() =
     let standard = OutputStream()
     let error = OutputStream()
     let metaInfo = OutputStream()
     member this.Standard = standard
     member this.Error = error
     member this.MetaInfo = metaInfo
+    
+

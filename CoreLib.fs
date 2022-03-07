@@ -33,7 +33,7 @@ let private buildinPrint : ProvidedFunction =
             |> List.map (fun x -> sprintf "%f " x)
             |> String.Concat
             |> sprintf "%s\n"
-        out.Standard.Write(outputString)
+        out.WriteSTD(outputString)
         Ok 0.
 
 let private buildinPrintChar : ProvidedFunction =
@@ -43,7 +43,7 @@ let private buildinPrintChar : ProvidedFunction =
             |> List.map (fun x -> x |> int |> char)
             |> String.Concat
             |> sprintf "%s\n"
-        out.Standard.Write(outputString)
+        out.WriteSTD(outputString)
         Ok 0.
 
 let private argError n = Error (sprintf "Diese Funktion erwartet 2 Argumente - es wurden aber %i übergeben" n)
@@ -82,7 +82,7 @@ let private lesser : ProvidedFunction =
         | _ -> argError args.Length
 
 let private juri : ProvidedFunction =
-    fun args ->
+    fun _ args ->
         match args with
         | [l; r] ->
             let rnd = Random(Environment.TickCount)
