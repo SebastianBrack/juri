@@ -1,5 +1,6 @@
 # Liste aller Keywords
 
+* =
 * if
 * repeat
 * fun
@@ -18,21 +19,23 @@
 ```
 
 
-# Listen (noch nicht implementiert)
+# Listen
 **Listennamen** beginnen mit einem ```:```.
-
+Listen werden mit folgender Sytax deklariert:
 ```
 :myList = [1 2 3 4]
 ```
 
-Listenelemente können per **Index** referenziert werden.
+Einzelne Listenelemente können per **Index** referenziert und geändert werden.  Das Erste Element hat den Index 0
 ```
-2:myList
+print(0:myList)     // gibt 1 aus
+print(-1:myList)    // gibt 4 aus
+2:myList = 99       // weist dem Element an Index 2 den wert 99 zu: [1 2 99 4]
 ```
 
 Um die **Länge** einer Liste herrauszufinden fragen Sie einfach.
 ```
-?:myList
+?:myList            // evaluiert zu 4
 ```
 
 Um über eine Liste zu **iterieren** stellt juri die ```iterate``` Anweisung zur Verfügung.
@@ -49,7 +52,7 @@ if i < ?:myList repeat
     i = i+1
 ```
 
-**Funktionsparameter** können als Liste festgelegt werden
+**Funktionsparameter** können als Liste festgelegt werden (noch nicht Implementiert)
 ```
 fun snipList :list start end
     i = start
