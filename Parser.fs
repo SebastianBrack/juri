@@ -176,7 +176,7 @@ let private listAccess =
 
 
 let private binaryOperation =
-    (number <|> variableReference <|> functionCall <|> listAccess <|> listLength) .>>. operator .>>. expression
+    (listAccess <|> listLength <|> number <|> variableReference <|> functionCall ) .>>. operator .>>. expression
     |>> fun ((left, op), right) -> Binary (op, left, right)
 // 1 + 2 + 3 + 4
 // (1+2) + 3
@@ -184,7 +184,7 @@ let private binaryOperation =
 
 
 expressionImpl :=
-    [listAccess; binaryOperation; functionCall; variableReference; listLength; number]
+    [binaryOperation; listAccess; functionCall; variableReference; listLength; number]
     |> choice
     .>> ws
     |> deferr "Es wird ein Ausdruck erwartet."
