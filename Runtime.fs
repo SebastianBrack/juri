@@ -25,6 +25,7 @@ type ProvidedFunction =
 
 and EnvironmentObject =
     | Variable of float
+    | List of float array
     | CustomFunction of expectedArguments: Identifier list * functionBody: Instruction list
     | ProvidedFunction of ProvidedFunction
 
@@ -48,4 +49,3 @@ let evalResultPrinter
         exp
     | _ ->
         exp
-

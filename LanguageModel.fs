@@ -3,13 +3,11 @@ module Juri.Internal.LanguageModel
 
 type Identifier = Identifier of string
 type BinaryOperator = BinaryOperator of string
-type ListIdentifier = ListIdentifier of string
 
 type Expression =
     | LiteralNumber of float
-    | LiteralList of Expression list
-    | ListReference of ListIdentifier
-    | ListAccess of ListIdentifier * Expression
+    | ListAccess of Identifier * Expression
+    | ListLength of Identifier
     | VariableReference of Identifier
     | FunctionCall of functionName: Identifier * arguments: Expression list
     | Binary of operator: BinaryOperator * left: Expression * right: Expression
@@ -17,10 +15,11 @@ type Expression =
 type Instruction =
     | Expression of Expression
     | Assignment of variableName: Identifier * value: Expression
-    | ListAssignment of ListName: ListIdentifier * values: Expression list
-    | ListElementAssignment of  ListIdentifier * Expression * Expression
+    | ListAssignment of listName: Identifier * values: Expression list
+    | ListElementAssignment of  listName: Identifier * index: Expression * value: Expression
     | FunctionDefinition of functionName: Identifier * argumentNames: Identifier list * functionBody: Codeblock
     | Loop of condition: Expression * repeat: bool * loopBody: Instruction list
+    | Iteration of list: Identifier * elementName: Identifier * loopBody: Instruction list
     | OperatorDefinition of operator: BinaryOperator * leftArg: Identifier * rightArg: Identifier * functionBody: Codeblock
 
 

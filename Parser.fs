@@ -70,14 +70,13 @@ let private listIdentifier =
 
     let identifierStart = pchar ':' 
 
-
     let identifierTail =
         '_' :: ['a'..'z'] @ ['A'..'Z'] @ ['0'..'9']
         |> Set |> anyOf
 
     identifierStart .>>. (many identifierTail)
     .>> ws
-    |>> fun (c, cs) -> c :: cs |> String.Concat |> ListIdentifier
+    |>> fun (c, cs) -> c :: cs |> String.Concat |> Identifier
     |> deferr "Es wurde ein ListIdentifier erwartet."
 
 
@@ -86,7 +85,7 @@ let private listIdentifier =
 let private operator =
 
     let operatorChar =
-        ['+'; '-'; '*'; '/'; '>'; '<'; '.'; '='; '!'; '%'; '?']
+        ['+'; '-'; '*'; '/'; '>'; '<'; '.'; '='; '!'; '%']
         |> Set |> anyOf
 
     many1 operatorChar
@@ -98,6 +97,12 @@ let private operator =
 // keywords and controll chars
 let eq =
     pchar '=' .>> ws
+    
+let iterate =
+    pstring "iterate" .>> ws
+    
+let jas =
+    pstring "as" .>> ws
 
 let ifloop =
     pstring "if" .>> ws
@@ -144,21 +149,28 @@ let private variableReference =
     identifier
     |>> VariableReference
 
-let private listReference =
-    listIdentifier
-    |>> ListReference
+//let private listReference =
+//    listIdentifier
+//    |>> ListReference
 
 let private functionCall =
     identifier .>> openParen .>>. (many1 expression)
     .>> (closingParen |> failAsFatal)
     |>> FunctionCall
 
+
+let private listLength =
+    pchar '?' >>. listIdentifier
+    |>> ListLength
+    
+    
 let private listAccess =
-    (number <|> variableReference <|> functionCall) .>>. listIdentifier
+    (number <|> variableReference <|> functionCall <|> listLength) .>>. listIdentifier
     |>> fun (index, id) -> ListAccess (id, index)
 
+
 let private binaryOperation =
-    (number <|> variableReference <|> functionCall <|> listAccess) .>>. operator .>>. expression
+    (number <|> variableReference <|> functionCall <|> listAccess <|> listLength) .>>. operator .>>. expression
     |>> fun ((left, op), right) -> Binary (op, left, right)
 // 1 + 2 + 3 + 4
 // (1+2) + 3
@@ -166,16 +178,16 @@ let private binaryOperation =
 
 
 expressionImpl :=
-    [binaryOperation; functionCall; listReference; variableReference; listAccess; number]
+    [listAccess; binaryOperation; functionCall; variableReference; listLength; number]
     |> choice
     .>> ws
     |> deferr "Es wird ein Ausdruck erwartet."
 
 
 
-let private listLiteral = 
-    openBracket >>. (many expression) .>> closingBracket
-    |>> LiteralList
+//let private listLiteral = 
+//   openBracket >>. (many expression) .>> closingBracket
+//    |>> LiteralList
 
 
 
@@ -264,7 +276,7 @@ let private listAssignment =
     .>> eq
     .>>. (openBracket >>. (many expression) .>> closingBracket |> failAsFatal)
     .>> newlineEOS .>> emptyLines
-    |>> fun (id, exprs) -> ListAssignment (id, exprs)
+    |>> ListAssignment
 
 
 
@@ -277,6 +289,17 @@ let private listElementAssignment =
     |>> fun ((index, id), exp) -> ListElementAssignment (id, index, exp)
 
 
+
+let private listIteration =
+    iterate
+    >>. (listIdentifier |> failAsFatal)
+    .>> (jas |> failAsFatal)
+    .>>. identifier
+    .>> newline .>> emptyLines
+    .>>. (codeblock |> failAsFatal)
+    |>> fun ((listName, elementName), body) -> Iteration (listName, elementName, body)
+    
+    
 
 let private functionDefinition =
     jfun
@@ -316,6 +339,7 @@ instructionImpl :=
         assignment
         listAssignment
         listElementAssignment
+        listIteration
         instructionExpression ]
     |> choice
 
