@@ -292,6 +292,30 @@ let private listAssignmentWithRange = // has to be tried before listAssignment i
     .>>. (openBracket >>. expression .>> rangeOperator .>>. expression .>> closingBracket)
     .>> newlineEOS .>> emptyLines
     |>> fun (id, (lowerBound, upperBound)) -> ListAssignmentWithRange (id, lowerBound, upperBound)
+    
+    
+    
+let private listInitialisationWithCode = // has to be tried before listInitialisationWithValue in the parsing order
+    listIdentifier
+    .>> eq
+    .>> jinit
+    .>>. (expression |> failAsFatal)
+    .>> jas
+    .>>. (identifier |> failAsFatal)
+    .>> newline .>> emptyLines
+    .>>. (codeblock |> failAsFatal)
+    |>> fun (((id, size), indexName), body) -> ListInitialisationWithCode (id, size, indexName, body)
+    
+    
+    
+let private listInitialisationWithValue =
+    listIdentifier
+    .>> eq
+    .>> jinit
+    .>>. (expression |> failAsFatal)
+    .>>. (expression |> failAsFatal)
+    .>> newlineEOS .>> emptyLines
+    |>> fun ((id, size), value) -> ListInitialisationWithValue (id, size, value)
 
 
 
@@ -354,6 +378,8 @@ instructionImpl :=
         assignment
         listAssignmentWithRange
         listAssignment
+        listInitialisationWithCode
+        listInitialisationWithValue
         listElementAssignment
         listIteration
         instructionExpression ]
