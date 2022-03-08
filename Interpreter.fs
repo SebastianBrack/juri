@@ -78,6 +78,27 @@ and private computeListAssignmentWithRange
     
     
     
+and private computeListInitialisationWithValue
+        (listName, sizeExpression, valueExpression)
+        (outputWriter: IOutputWriter)
+        (state: ComputationState) : InterpreterResult<ComputationState> =
+    
+    let _, env = state
+    let _, env = state
+    match (env.TryFind listName) with
+    | None | Some (List _) ->
+        let sizeEvalResult = eval outputWriter state sizeExpression
+        let valueEvalResult = eval outputWriter state valueExpression
+        match (sizeEvalResult, valueEvalResult) with
+        | (Ok size, Ok value) ->
+            let newList = Array.init (int size) (fun _ -> value)
+            let newEnv = env |> Map.add listName (List newList)
+            Ok (None, newEnv)
+        | (Error msg, _) -> Error msg
+        | (_, Error msg) -> Error msg
+    | _ -> Error $"{id} ist keine Liste und kann keine entsprechenden Werte zugewiesen bekommen."
+    
+    
 and private computeListElementAssignment
         (id, indexExpression, valueExpression)
         (outputWriter: IOutputWriter)
@@ -160,9 +181,15 @@ and compute
         | ListAssignment(listName, expressions) ->
             computeListAssignment (listName, expressions) outputWriter state
             >>= compute tail outputWriter
-        | ListAssignmentWithRange(listName, lowerBound, upperBound) ->
+        | ListAssignmentWithRange (listName, lowerBound, upperBound) ->
             computeListAssignmentWithRange (listName, lowerBound, upperBound) outputWriter state
             >>= compute tail outputWriter
+        | ListInitialisationWithValue (listName, size, value) ->
+            computeListInitialisationWithValue (listName, size, value) outputWriter state
+            >>= compute tail outputWriter
+        //| ListInitialisationWithCode(listName, size, indexName, instructions) ->
+        //    computeListInitialisationWithCode (listName, size, indexName, instructions) outputWriter state
+        //    >>= compute tail outputWriter
         | ListElementAssignment(identifier, indexExpression, valueExpression) ->
             computeListElementAssignment (identifier, indexExpression, valueExpression) outputWriter state
             >>= compute tail outputWriter
