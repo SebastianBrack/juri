@@ -97,7 +97,7 @@ and private computeListIteration
         computeAssignment (valueName, LiteralNumber value) outputWriter state
         >>= compute loopBody outputWriter
     let rec iterate (xs: float array) pos state =
-        if xs.Length >= pos then
+        if pos = xs.Length then
             Ok state
         else
             computeIteration state xs[pos]
