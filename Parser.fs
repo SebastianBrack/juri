@@ -70,7 +70,6 @@ let private listIdentifier =
 
     let identifierStart = pchar ':' 
 
-
     let identifierTail =
         '_' :: ['a'..'z'] @ ['A'..'Z'] @ ['0'..'9']
         |> Set |> anyOf
@@ -179,7 +178,7 @@ let private binaryOperation =
 
 
 expressionImpl :=
-    [binaryOperation; functionCall; variableReference; listAccess; listLength; number]
+    [listAccess; binaryOperation; functionCall; variableReference; listLength; number]
     |> choice
     .>> ws
     |> deferr "Es wird ein Ausdruck erwartet."
