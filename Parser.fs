@@ -98,6 +98,12 @@ let private operator =
 let eq =
     pchar '=' .>> ws
     
+let rangeOperator =
+    pstring "to" .>> ws
+    
+let jinit =
+    pstring "init" .>> ws
+    
 let iterate =
     pstring "iterate" .>> ws
     
@@ -274,9 +280,18 @@ let private assignment =
 let private listAssignment =
     listIdentifier
     .>> eq
-    .>>. (openBracket >>. (many expression) .>> closingBracket |> failAsFatal)
+    .>>. (openBracket >>. (many expression) .>> closingBracket)
     .>> newlineEOS .>> emptyLines
     |>> ListAssignment
+    
+    
+    
+let private listAssignmentWithRange = // has to be tried before listAssignment in the parsing order
+    listIdentifier
+    .>> eq
+    .>>. (openBracket >>. expression .>> rangeOperator .>>. expression .>> closingBracket)
+    .>> newlineEOS .>> emptyLines
+    |>> fun (id, (lowerBound, upperBound)) -> ListAssignmentWithRange (id, lowerBound, upperBound)
 
 
 
@@ -337,6 +352,7 @@ instructionImpl :=
         loop
         functionDefinition
         assignment
+        listAssignmentWithRange
         listAssignment
         listElementAssignment
         listIteration

@@ -7,6 +7,9 @@ open Runtime
 
 
 
+// helper functions
+
+
 let rec private computeLoop
         (con: Expression)
         (rep: bool)
@@ -52,6 +55,27 @@ and private computeListAssignment
         evalList expressions outputWriter state
         >>= addListToState
     | _ -> Error $"{id} ist keine Liste und kann keine entsprechenden Werte zugewiesen bekommen."
+    
+    
+    
+and private computeListAssignmentWithRange
+        (id, lowerBoundExpression, upperBoundExpression)
+        (outputWriter: IOutputWriter)
+        (state: ComputationState) : InterpreterResult<ComputationState> =
+        
+    let _, env = state
+    match (env.TryFind id) with
+    | None | Some (List _) ->
+        let lowerEvalResult = eval outputWriter state lowerBoundExpression
+        let upperEvalResult = eval outputWriter state upperBoundExpression
+        match (lowerEvalResult, upperEvalResult) with
+        | (Ok low, Ok up) ->
+            let newEnv = env |> Map.add id (List [|low..up|])
+            Ok (None, newEnv)
+        | (Error msg, _) -> Error msg
+        | (_, Error msg) -> Error msg
+    | _ -> Error $"{id} ist keine Liste und kann keine entsprechenden Werte zugewiesen bekommen."
+    
     
     
 and private computeListElementAssignment
@@ -135,6 +159,9 @@ and compute
             >>= compute tail outputWriter
         | ListAssignment(listName, expressions) ->
             computeListAssignment (listName, expressions) outputWriter state
+            >>= compute tail outputWriter
+        | ListAssignmentWithRange(listName, lowerBound, upperBound) ->
+            computeListAssignmentWithRange (listName, lowerBound, upperBound) outputWriter state
             >>= compute tail outputWriter
         | ListElementAssignment(identifier, indexExpression, valueExpression) ->
             computeListElementAssignment (identifier, indexExpression, valueExpression) outputWriter state

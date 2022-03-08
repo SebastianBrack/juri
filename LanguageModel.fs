@@ -16,6 +16,7 @@ type Instruction =
     | Expression of Expression
     | Assignment of variableName: Identifier * value: Expression
     | ListAssignment of listName: Identifier * values: Expression list
+    | ListAssignmentWithRange of listName: Identifier * lowerBound: Expression * upperBound: Expression
     | ListElementAssignment of  listName: Identifier * index: Expression * value: Expression
     | FunctionDefinition of functionName: Identifier * argumentNames: Identifier list * functionBody: Codeblock
     | Loop of condition: Expression * repeat: bool * loopBody: Instruction list
