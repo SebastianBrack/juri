@@ -26,7 +26,7 @@ Listen werden mit folgender Sytax deklariert:
 :myList = [1 2 3 4]
 ```
 
-Einzelne Listenelemente können per **Index** referenziert und geändert werden.  Das Erste Element hat den Index 0
+Einzelne Listenelemente können per **Index** referenziert und geändert werden.  Das Erste Element hat den Index 0.
 ```
 print(0:myList)     // gibt 1 aus
 print(-1:myList)    // gibt 4 aus
