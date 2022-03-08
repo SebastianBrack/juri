@@ -104,7 +104,7 @@ and private computeListIteration
             >>= iterate xs (pos+1) 
     match (env.TryFind listName) with
     | Some (List xs) -> iterate xs 0 state
-    | _ -> Error $"{id} ist keine Liste."
+    | _ -> Error $"{listName} ist keine Liste."
 
 
 and compute
@@ -178,7 +178,7 @@ and private eval
             evalList args outputWriter state
             >>= evalCustomFunction (argNames, body) outputWriter state
         | Some _ -> Error $"{id} ist keine Funktion."
-        | None -> Error $"Der Verweis auf %A{id} konnt nicht aufgelöst werden."
+        | None -> Error $"Der Verweis auf %A{id} konnte nicht aufgelöst werden."
     | Binary (BinaryOperator op, left, right) ->
         match (Map.tryFind (Identifier op) env) with
         | Some (ProvidedFunction f) ->

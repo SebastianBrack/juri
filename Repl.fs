@@ -22,10 +22,10 @@ let rec private repl (outputWriter: IOutputWriter) (state: ComputationState) =
         |> evalResultPrinter true outputWriter
         >>= repl outputWriter
     | Failure (msg, _) ->
-        outputWriter.WriteERR(msg)
+        outputWriter.WriteERR(msg+"\n")
         repl outputWriter state
     | Fatal (msg, _) ->
-        outputWriter.WriteERR(msg)
+        outputWriter.WriteERR(msg+"\n")
         repl outputWriter state
 
 
