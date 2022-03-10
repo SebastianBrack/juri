@@ -2,5 +2,9 @@
 x = 10
 :numbers = [1 to x]
 
+print(x)
+
+# Das ist ein Kommentar
+
 iterate :numbers as n
     print(n+1)

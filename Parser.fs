@@ -207,9 +207,9 @@ let emptyLines =
         pchar '#' .>> (AsUntilB (anyChar()) newlineEOS)
         |>> ignore
     let empty =
-        many (ws >>. newline)
+        ws >>. newline
         |>> ignore
-    either empty commentLine
+    many (either commentLine empty)
 
 
 
