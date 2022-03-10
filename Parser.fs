@@ -98,6 +98,12 @@ let private operator =
 let eq =
     pchar '=' .>> ws
     
+let rangeOperator =
+    pstring "to" .>> ws
+    
+let jinit =
+    pstring "init" .>> ws
+    
 let iterate =
     pstring "iterate" .>> ws
     
@@ -170,7 +176,7 @@ let private listAccess =
 
 
 let private binaryOperation =
-    (number <|> variableReference <|> functionCall <|> listAccess <|> listLength) .>>. operator .>>. expression
+    (listAccess <|> listLength <|> number <|> variableReference <|> functionCall ) .>>. operator .>>. expression
     |>> fun ((left, op), right) -> Binary (op, left, right)
 // 1 + 2 + 3 + 4
 // (1+2) + 3
@@ -178,7 +184,7 @@ let private binaryOperation =
 
 
 expressionImpl :=
-    [listAccess; binaryOperation; functionCall; variableReference; listLength; number]
+    [binaryOperation; listAccess; functionCall; variableReference; listLength; number]
     |> choice
     .>> ws
     |> deferr "Es wird ein Ausdruck erwartet."
@@ -274,9 +280,42 @@ let private assignment =
 let private listAssignment =
     listIdentifier
     .>> eq
-    .>>. (openBracket >>. (many expression) .>> closingBracket |> failAsFatal)
+    .>>. (openBracket >>. (many expression) .>> closingBracket)
     .>> newlineEOS .>> emptyLines
     |>> ListAssignment
+    
+    
+    
+let private listAssignmentWithRange = // has to be tried before listAssignment in the parsing order
+    listIdentifier
+    .>> eq
+    .>>. (openBracket >>. expression .>> rangeOperator .>>. expression .>> closingBracket)
+    .>> newlineEOS .>> emptyLines
+    |>> fun (id, (lowerBound, upperBound)) -> ListAssignmentWithRange (id, lowerBound, upperBound)
+    
+    
+    
+let private listInitialisationWithCode = // has to be tried before listInitialisationWithValue in the parsing order
+    listIdentifier
+    .>> eq
+    .>> jinit
+    .>>. (expression |> failAsFatal)
+    .>> jas
+    .>>. (identifier |> failAsFatal)
+    .>> newline .>> emptyLines
+    .>>. (codeblock |> failAsFatal)
+    |>> fun (((id, size), indexName), body) -> ListInitialisationWithCode (id, size, indexName, body)
+    
+    
+    
+let private listInitialisationWithValue =
+    listIdentifier
+    .>> eq
+    .>> jinit
+    .>>. (expression |> failAsFatal)
+    .>>. (expression |> failAsFatal)
+    .>> newlineEOS .>> emptyLines
+    |>> fun ((id, size), value) -> ListInitialisationWithValue (id, size, value)
 
 
 
@@ -337,7 +376,10 @@ instructionImpl :=
         loop
         functionDefinition
         assignment
+        listAssignmentWithRange
         listAssignment
+        listInitialisationWithCode
+        listInitialisationWithValue
         listElementAssignment
         listIteration
         instructionExpression ]

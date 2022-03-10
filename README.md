@@ -1,6 +1,5 @@
 # Liste aller Keywords
 
-* =
 * if
 * repeat
 * fun
@@ -23,7 +22,14 @@
 **Listennamen** beginnen mit einem ```:```.
 Listen werden mit folgender Sytax deklariert:
 ```
-:myList = [1 2 3 4]
+:myList = [1 2 3 4]          // Erstellt die Liste mit den gegebenen Elementen
+
+:anotherList = [2 to 345]      // Erstellt eine Liste mit den Zahlen von 2 bis 345
+
+:longList = init 1000 0      // Erstellt eine Liste mit 1000 nullen
+
+:evenNums = init 50 as i
+    i * 2                    // Erstellt eine Liste mit den Zahlen 0,2,4,8... 
 ```
 
 Einzelne Listenelemente können per **Index** referenziert und geändert werden.  Das Erste Element hat den Index 0.
