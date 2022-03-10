@@ -197,7 +197,13 @@ let private instruction, instructionImpl = createParserForwarder ()
 
 
 let emptyLines =
-    many (ws >>. newline)
+    let commentLine =
+        pchar '#' .>> (AsUntilB (anyChar()) newlineEOS)
+        |>> ignore
+    let empty =
+        many (ws >>. newline)
+        |>> ignore
+    either empty commentLine
 
 
 

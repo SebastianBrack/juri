@@ -339,6 +339,31 @@ let many1 parser =
     Parser (innerFnc [])
 
 
+/// Tries to Parse a list of As that ends with a B
+/// If Parser A fails before a B can be parsed the overall Parser fails.
+let AsUntilB parserA parserB =
+    let rec innerFnc results stream =
+        match run parserB stream with
+        | Fatal (m,e) ->
+            Fatal (m,e)
+        | Failure (_) ->
+            match run parserA stream with
+            | Fatal (m,e) ->
+                Fatal (m,e)
+            | Failure (m,pe) ->
+                Failure (m,pe)
+            | Success (r,c,p) ->
+                stream.SetContext(c)
+                stream.SetPosition(p)
+                innerFnc (results @ [r]) stream
+        | Success (_,c,p) ->
+            stream.SetContext(c)
+            stream.SetPosition(p)
+            Success (results, stream.GetContext(), stream.GetPosition()) 
+    Parser (innerFnc [])
+        
+
+
 /// Applies the parser. If it succeeds it wrappes the result in a list.
 /// If it fails it returns an empty list as result.
 let optional parser =
@@ -427,6 +452,21 @@ let anyOf (chars: char Set) =
                 Success (nextc, stream.GetContext(), stream.GetPosition() + 1)
     |> Parser
 
+
+let anyBut (charsToExclude: char Set) =
+    fun (stream: CharStream<_>) ->
+        if not stream.HasNext then
+            let message = sprintf "Expected anything that is not %A but the input stream is empty." charsToExclude
+            Failure (message, None)
+        else 
+            let nextc = stream.Next
+            if Set.contains nextc charsToExclude then
+                let message = sprintf "Expected anything that is not: %A but instead found %c." charsToExclude nextc
+                Failure (message, None)
+            else
+                Success (nextc, stream.GetContext(), stream.GetPosition() + 1)
+    |> Parser
+    
 
 let pchar c =
     fun (stream: CharStream<_>) ->
