@@ -84,20 +84,63 @@ and private computeListInitialisationWithValue
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
     let _, env = state
-    let _, env = state
     match (env.TryFind listName) with
     | None | Some (List _) ->
         let sizeEvalResult = eval outputWriter state sizeExpression
         let valueEvalResult = eval outputWriter state valueExpression
         match (sizeEvalResult, valueEvalResult) with
         | (Ok size, Ok value) ->
-            let newList = Array.init (int size) (fun _ -> value)
+            let newList = Array.create (int size) value
             let newEnv = env |> Map.add listName (List newList)
             Ok (None, newEnv)
         | (Error msg, _) -> Error msg
         | (_, Error msg) -> Error msg
     | _ -> Error $"{id} ist keine Liste und kann keine entsprechenden Werte zugewiesen bekommen."
     
+            
+            
+and private computeListInitialisationWithCode
+        (listName, sizeExpression, indexName, generatorCode) 
+        (outputWriter: IOutputWriter)
+        (state: ComputationState) : InterpreterResult<ComputationState> =
+    
+    let _, env = state
+    let generateListElement i state =
+        let generatorResult =
+            computeAssignment (indexName, LiteralNumber i) outputWriter state
+            >>= compute generatorCode outputWriter
+        match generatorResult with
+        | Error msg -> Error $"Fehler beim Generieren des Listenelements: {msg}"
+        | Ok (None, _) -> Error $"Fehler beim Generieren des Listenelements: Der Generatorcode hat keinen Wert zurückgegeben."
+        | Ok (Some x, _) -> Ok x
+    match (env.TryFind listName) with
+    | None | Some (List _) ->
+        let sizeEvalResult = eval outputWriter state sizeExpression
+        match sizeEvalResult with
+        | Ok size ->
+            if size < 0. then
+                Error $"Es kann keine List der Länge {size} erstellt werden."
+            else
+                let newList : float array = Array.create (int size) 0.
+                let mutable i = 0
+                let mutable cancelFlag = false
+                let mutable generationError = Error ""
+                while i < (int size) && not cancelFlag do
+                    let element = generateListElement i state
+                    match element with
+                    | Error msg ->
+                        cancelFlag <- true
+                        generationError <- Error msg
+                    | Ok x ->
+                        newList[i] <- x
+                    i <- i+1
+                if cancelFlag then
+                    generationError
+                else
+                    let newEnv = env |> Map.add listName (List newList)
+                    Ok (None, newEnv)
+        | Error msg -> Error msg
+    | _ -> Error $"{id} ist keine Liste und kann keine entsprechenden Werte zugewiesen bekommen."
     
 and private computeListElementAssignment
         (id, indexExpression, valueExpression)
@@ -187,9 +230,9 @@ and compute
         | ListInitialisationWithValue (listName, size, value) ->
             computeListInitialisationWithValue (listName, size, value) outputWriter state
             >>= compute tail outputWriter
-        //| ListInitialisationWithCode(listName, size, indexName, instructions) ->
-        //    computeListInitialisationWithCode (listName, size, indexName, instructions) outputWriter state
-        //    >>= compute tail outputWriter
+        | ListInitialisationWithCode(listName, size, indexName, instructions) ->
+            computeListInitialisationWithCode (listName, size, indexName, instructions) outputWriter state
+            >>= compute tail outputWriter
         | ListElementAssignment(identifier, indexExpression, valueExpression) ->
             computeListElementAssignment (identifier, indexExpression, valueExpression) outputWriter state
             >>= compute tail outputWriter
