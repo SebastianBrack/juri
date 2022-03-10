@@ -69,11 +69,11 @@ and private computeListAssignmentWithRange
         let lowerEvalResult = eval outputWriter state lowerBoundExpression
         let upperEvalResult = eval outputWriter state upperBoundExpression
         match (lowerEvalResult, upperEvalResult) with
-        | (Ok low, Ok up) ->
+        | Ok low, Ok up ->
             let newEnv = env |> Map.add id (List [|low..up|])
             Ok (None, newEnv)
-        | (Error msg, _) -> Error msg
-        | (_, Error msg) -> Error msg
+        | Error msg, _ -> Error msg
+        | _, Error msg -> Error msg
     | _ -> Error $"{id} ist keine Liste und kann keine entsprechenden Werte zugewiesen bekommen."
     
     
@@ -89,12 +89,12 @@ and private computeListInitialisationWithValue
         let sizeEvalResult = eval outputWriter state sizeExpression
         let valueEvalResult = eval outputWriter state valueExpression
         match (sizeEvalResult, valueEvalResult) with
-        | (Ok size, Ok value) ->
+        | Ok size, Ok value ->
             let newList = Array.create (int size) value
             let newEnv = env |> Map.add listName (List newList)
             Ok (None, newEnv)
-        | (Error msg, _) -> Error msg
-        | (_, Error msg) -> Error msg
+        | Error msg, _ -> Error msg
+        | _, Error msg -> Error msg
     | _ -> Error $"{id} ist keine Liste und kann keine entsprechenden Werte zugewiesen bekommen."
     
             
@@ -152,13 +152,13 @@ and private computeListElementAssignment
         let indexEvalResult = eval outputWriter state indexExpression
         let valueEvalResult = eval outputWriter state valueExpression
         match (indexEvalResult, valueEvalResult ) with
-        | (Ok index, Ok value) ->
+        | Ok index, Ok value ->
             let trueIndex = if index < 0.0 then xs.Length + int index else int index
             if trueIndex >= 0 && trueIndex < xs.Length then
                 xs[trueIndex] <- value
             Ok (Some value, env)
-        | (Error msg, _) -> Error msg
-        | (_, Error msg) -> Error msg
+        | Error msg, _ -> Error msg
+        | _, Error msg -> Error msg
     | _ -> Error $"{id} ist keine Liste."
     
 
