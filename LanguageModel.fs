@@ -11,6 +11,7 @@ type Expression =
     | VariableReference of Identifier
     | FunctionCall of functionName: Identifier * arguments: Expression list
     | Binary of operator: BinaryOperator * left: Expression * right: Expression
+    | ParenthesizedExpression of Expression
 
 type Instruction =
     | Expression of Expression

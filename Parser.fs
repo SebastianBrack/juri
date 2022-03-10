@@ -151,13 +151,25 @@ let private number =
 
 
 
+let private parenthesizedExpression =
+    openParen
+    >>. expression
+    .>> (closingParen |> failAsFatal)
+    |>> ParenthesizedExpression
+    
+
+
 let private variableReference =
     identifier
     |>> VariableReference
 
+
+
 //let private listReference =
 //    listIdentifier
 //    |>> ListReference
+
+
 
 let private functionCall =
     identifier .>> openParen .>>. (many1 expression)
@@ -165,26 +177,38 @@ let private functionCall =
     |>> FunctionCall
 
 
+
 let private listLength =
     pchar '?' >>. listIdentifier
     |>> ListLength
     
     
+    
 let private listAccess =
-    (number <|> variableReference <|> functionCall <|> listLength) .>>. listIdentifier
+    (parenthesizedExpression <|> number <|> variableReference <|> functionCall <|> listLength) .>>. listIdentifier
     |>> fun (index, id) -> ListAccess (id, index)
 
 
 let private binaryOperation =
-    (listAccess <|> listLength <|> number <|> variableReference <|> functionCall ) .>>. operator .>>. expression
+    (parenthesizedExpression <|> listAccess <|> listLength <|> number <|> variableReference <|> functionCall )
+    .>>. operator
+    .>>. (expression |> deferr "Es fehlt ein Operand." |> failAsFatal)
     |>> fun ((left, op), right) -> Binary (op, left, right)
 // 1 + 2 + 3 + 4
 // (1+2) + 3
 // 1 + (2+ (3+4))
 
 
-expressionImpl :=
-    [binaryOperation; listAccess; functionCall; variableReference; listLength; number]
+expressionImpl.Value <-
+    [
+        binaryOperation
+        parenthesizedExpression
+        listAccess
+        functionCall
+        variableReference
+        listLength
+        number
+    ]
     |> choice
     .>> ws
     |> deferr "Es wird ein Ausdruck erwartet."
@@ -377,7 +401,7 @@ let private loop =
 
 
 
-instructionImpl :=
+instructionImpl.Value <-
     [   binaryOperatorDefinition
         loop
         functionDefinition
@@ -412,7 +436,7 @@ let parseProgram (text: char seq) =
         //stream.PrintError(m,e)
         ()
     | Success(r,_,_) ->
-        //printfn "%A" r
+        printfn "%A" r
         //printfn "%A" (stream.GetContext())
         ()
     parsingResult

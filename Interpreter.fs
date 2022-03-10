@@ -286,6 +286,8 @@ and private eval
             >>= (evalCustomFunction (argNames, body) outputWriter state)
         | Some _ -> Error $"{id} ist kein Operator."
         | None -> Error $"Der Operator %A{op} ist nicht definiert"
+    | ParenthesizedExpression expression ->
+        eval outputWriter state expression
 
 
 and private evalListAccess
