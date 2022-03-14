@@ -181,7 +181,7 @@ let private variableReference =
 
 
 let private functionCall =
-    identifier .>> openParen .>>. (many1 expression)
+    identifier .>> openParen .>>. (many expression)
     .>> (closingParen |> failAsFatal)
     |>> FunctionCall
 
