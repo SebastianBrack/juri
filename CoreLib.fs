@@ -46,6 +46,22 @@ let private buildinPrintChar : ProvidedFunction =
         out.WriteSTD(outputString)
         Ok 0.
 
+
+let private buildinInput : ProvidedFunction =
+    fun _ args ->
+        args
+        |> List.map char 
+        |> String.Concat
+        |> printf "%s"
+
+        try
+            stdin.ReadLine()
+            |> float
+            |> Ok
+        with
+        | _ -> Error $"Das ist doch keine Zahl Juuuuuunge!"
+    
+
 let private argError n = Error (sprintf "Diese Funktion erwartet 2 Argumente - es wurden aber %i übergeben" n)
 
 let private plus : ProvidedFunction =
@@ -160,6 +176,7 @@ let createEnvWithCoreLibFunctions () : Environment =
         (Identifier "eq", ProvidedFunction buildinEquals)
         (Identifier "print", ProvidedFunction buildinPrint)
         (Identifier "printc", ProvidedFunction buildinPrintChar)
+        (Identifier "input", ProvidedFunction buildinInput)
         (Identifier "+", ProvidedFunction plus)
         (Identifier "-", ProvidedFunction minus)
         (Identifier "*", ProvidedFunction star)
