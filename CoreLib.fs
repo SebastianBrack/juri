@@ -60,6 +60,14 @@ let private buildinInput : ProvidedFunction =
             |> Ok
         with
         | _ -> Error $"Das ist doch keine Zahl Juuuuuunge!"
+
+let private buildinRandom : ProvidedFunction =
+    fun _ args ->
+        let rand = Random()
+        match args with
+        | [a]     -> rand.Next(0, int a) |> float |> Ok
+        | [a;b]   -> rand.Next(int a, int b) |> float |> Ok
+        | _       -> Error (sprintf "Diese Funktion erwartet 1 oder 2 Argumente - es wurden aber %i übergeben." args.Length)
     
 
 let private argError n = Error (sprintf "Diese Funktion erwartet 2 Argumente - es wurden aber %i übergeben" n)
@@ -177,6 +185,7 @@ let createEnvWithCoreLibFunctions () : Environment =
         (Identifier "print", ProvidedFunction buildinPrint)
         (Identifier "printc", ProvidedFunction buildinPrintChar)
         (Identifier "input", ProvidedFunction buildinInput)
+        (Identifier "rand", ProvidedFunction buildinRandom)
         (Identifier "+", ProvidedFunction plus)
         (Identifier "-", ProvidedFunction minus)
         (Identifier "*", ProvidedFunction star)
