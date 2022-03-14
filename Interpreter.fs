@@ -23,6 +23,7 @@ let rec private computeLoop
     | Ok _ when rep ->
             match (compute body outputWriter state) with
             | Error e -> Error e
+            | Ok nextState when nextState.ReturnFlag = true -> Ok nextState
             | Ok nextState when nextState.BreakFlag = true -> Ok {nextState with BreakFlag = false}
             | Ok nextState -> computeLoop con rep body outputWriter nextState
     | Ok _ -> (compute body outputWriter state)
@@ -139,7 +140,11 @@ and private computeListInitialisationWithCode
                     generationError
                 else
                     let newEnv = env |> Map.add listName (List newList)
-                    Ok {state with LastExpression = None; Environment = newEnv}
+                    Ok {
+                        LastExpression = None
+                        Environment = newEnv
+                        BreakFlag = false
+                        ReturnFlag = false }
         | Error msg -> Error msg
     | _ -> Error $"{id} ist keine Liste und kann keine entsprechenden Werte zugewiesen bekommen."
     
@@ -207,6 +212,10 @@ and compute
         match instruction with
         | Break ->
             Ok {state with BreakFlag = true}
+        | Return exp ->
+            match eval outputWriter state exp with
+            | Ok x -> Ok {state with ReturnFlag = true; LastExpression = Some x}
+            | Error e -> Error e
         | Expression exp ->
             match eval outputWriter state exp with
             | Ok x -> compute tail outputWriter {state with LastExpression = Some x}
