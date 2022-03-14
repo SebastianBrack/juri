@@ -19,6 +19,7 @@
     <Content Include="examples\demo.txt" />
     <Content Include="examples\test.jri" />
     <Content Include="examples\test2.jri" />
+    <Content Include="examples\test3.jri" />
     <Compile Include="JuriInterpreter.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
