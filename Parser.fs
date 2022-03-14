@@ -118,6 +118,9 @@ let jas =
 
 let ifloop =
     pstring "if" .>> ws
+    
+let jthen =
+    pstring "then" .>> ws
 
 let repeat =
     optional (pstring "repeat") .>> ws |>> (function | [] -> false | _ -> true)
@@ -404,6 +407,15 @@ let private loop =
     .>> newline .>> emptyLines
     .>>. (codeblock |> failAsFatal)
     |>> fun ((con, rep), body) -> Loop (con, rep, body)
+    
+    
+    
+let private conditionWithSingleStatement = // has to be parsed before loop
+    ifloop
+    >>. (expression |> failAsFatal)
+    .>> jthen
+    .>>. (instruction |> failAsFatal)
+    |>> fun (con, statement) -> Loop (con, false, [statement])
 
 
 
@@ -424,6 +436,7 @@ let private returnStatement =
 
 instructionImpl.Value <-
     [   binaryOperatorDefinition
+        conditionWithSingleStatement
         loop
         functionDefinition
         assignment
