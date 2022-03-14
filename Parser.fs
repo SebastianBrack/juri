@@ -104,6 +104,12 @@ let rangeOperator =
 let jinit =
     pstring "init" .>> ws
     
+let jbreak =
+    pstring "break" .>> ws
+    
+let jreturn =
+    pstring "return" .>> ws
+    
 let iterate =
     pstring "iterate" .>> ws
     
@@ -112,6 +118,9 @@ let jas =
 
 let ifloop =
     pstring "if" .>> ws
+    
+let jthen =
+    pstring "then" .>> ws
 
 let repeat =
     optional (pstring "repeat") .>> ws |>> (function | [] -> false | _ -> true)
@@ -151,18 +160,31 @@ let private number =
 
 
 
+let private parenthesizedExpression =
+    openParen
+    >>. expression
+    .>> (closingParen |> failAsFatal)
+    |>> ParenthesizedExpression
+    
+
+
 let private variableReference =
     identifier
     |>> VariableReference
+
+
 
 //let private listReference =
 //    listIdentifier
 //    |>> ListReference
 
+
+
 let private functionCall =
-    identifier .>> openParen .>>. (many1 expression)
+    identifier .>> openParen .>>. (many expression)
     .>> (closingParen |> failAsFatal)
     |>> FunctionCall
+
 
 
 let private listLength =
@@ -170,21 +192,32 @@ let private listLength =
     |>> ListLength
     
     
+    
 let private listAccess =
-    (number <|> variableReference <|> functionCall <|> listLength) .>>. listIdentifier
+    (parenthesizedExpression <|> number <|> variableReference <|> functionCall <|> listLength) .>>. listIdentifier
     |>> fun (index, id) -> ListAccess (id, index)
 
 
 let private binaryOperation =
-    (listAccess <|> listLength <|> number <|> variableReference <|> functionCall ) .>>. operator .>>. expression
+    (parenthesizedExpression <|> listAccess <|> listLength <|> number <|> variableReference <|> functionCall )
+    .>>. operator
+    .>>. (expression |> deferr "Es fehlt ein Operand." |> failAsFatal)
     |>> fun ((left, op), right) -> Binary (op, left, right)
 // 1 + 2 + 3 + 4
 // (1+2) + 3
 // 1 + (2+ (3+4))
 
 
-expressionImpl :=
-    [binaryOperation; listAccess; functionCall; variableReference; listLength; number]
+expressionImpl.Value <-
+    [
+        binaryOperation
+        parenthesizedExpression
+        listAccess
+        functionCall
+        variableReference
+        listLength
+        number
+    ]
     |> choice
     .>> ws
     |> deferr "Es wird ein Ausdruck erwartet."
@@ -204,12 +237,12 @@ let private instruction, instructionImpl = createParserForwarder ()
 
 let emptyLines =
     let commentLine =
-        pchar '#' .>> (AsUntilB (anyChar()) newlineEOS)
+        ws >>. pchar '#' .>> (AsUntilB (anyChar()) newlineEOS)
         |>> ignore
     let empty =
-        many (ws >>. newline)
+        ws >>. newline
         |>> ignore
-    either empty commentLine
+    many (either commentLine empty)
 
 
 
@@ -374,11 +407,36 @@ let private loop =
     .>> newline .>> emptyLines
     .>>. (codeblock |> failAsFatal)
     |>> fun ((con, rep), body) -> Loop (con, rep, body)
+    
+    
+    
+let private conditionWithSingleStatement = // has to be parsed before loop
+    ifloop
+    >>. (expression |> failAsFatal)
+    .>> jthen
+    .>>. (instruction |> failAsFatal)
+    |>> fun (con, statement) -> Loop (con, false, [statement])
 
 
 
-instructionImpl :=
+let private breakStatement =
+    jbreak
+    .>> newlineEOS .>> emptyLines
+    |>> (fun _ -> Break)
+    
+
+
+let private returnStatement =
+    jreturn
+    >>. expression
+    .>> newlineEOS .>> emptyLines
+    |>> Return
+
+
+
+instructionImpl.Value <-
     [   binaryOperatorDefinition
+        conditionWithSingleStatement
         loop
         functionDefinition
         assignment
@@ -388,6 +446,8 @@ instructionImpl :=
         listInitialisationWithValue
         listElementAssignment
         listIteration
+        breakStatement
+        returnStatement
         instructionExpression ]
     |> choice
 

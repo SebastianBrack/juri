@@ -11,11 +11,11 @@ open Runtime
 
 let private runScript script =
     let outputWriter : IOutputWriter = ConsoleWriter()
-    let initialState : ComputationState = (None, createEnvWithCoreLibFunctions())
+    let initialState = { ComputationState.Default with Environment = createEnvWithCoreLibFunctions () }
     match parseProgram (script+"\n") with
     | Success (r,_,_) -> 
         compute r outputWriter initialState
-        |> evalResultPrinter false outputWriter
+        |> evalResultPrinter true outputWriter
         |> ignore
         0
     | Failure (msg, _) ->

@@ -3,6 +3,7 @@ module Juri.Internal.Repl
 open Interpreter
 open CoreLib
 open Juri.Internal.OutputWriter
+open Juri.Internal.Runtime
 open Runtime
 open Parser
 open ParserCombinators
@@ -32,5 +33,5 @@ let rec private repl (outputWriter: IOutputWriter) (state: ComputationState) =
 
 let startRepl () =
     let outputWriter = ConsoleWriter()
-    let initialState : ComputationState = (None, createEnvWithCoreLibFunctions())
+    let initialState = { ComputationState.Default with Environment = createEnvWithCoreLibFunctions () }
     repl outputWriter initialState

@@ -23,8 +23,10 @@ let rec private computeLoop
     | Ok _ when rep ->
             match (compute body outputWriter state) with
             | Error e -> Error e
-            | Ok x -> computeLoop con rep body outputWriter x
-    | Ok _          -> (compute body outputWriter state)
+            | Ok nextState when nextState.ReturnFlag = true -> Ok nextState
+            | Ok nextState when nextState.BreakFlag = true -> Ok {nextState with BreakFlag = false}
+            | Ok nextState -> computeLoop con rep body outputWriter nextState
+    | Ok _ -> (compute body outputWriter state)
 
 
 and private computeAssignment
@@ -32,10 +34,10 @@ and private computeAssignment
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
-    let _, env = state
+    let env = state.Environment
     let addVariableToState x =
         let newEnv = env |> Map.add id (Variable x)
-        Ok (Some x, newEnv)
+        Ok {state with LastExpression = None; Environment = newEnv}
     match (env.TryFind id) with
     | None | Some (Variable _) -> eval outputWriter state exp >>= addVariableToState
     | _ -> Error $"{id} ist keine Variable und kann keinen Wert zugewiesen bekommen."
@@ -46,10 +48,10 @@ and private computeListAssignment
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
         
-    let _, env = state
+    let env = state.Environment
     let addListToState (xs: float list) =
         let newEnv = env |> Map.add id (List (List.toArray xs))
-        Ok (None, newEnv)
+        Ok {state with LastExpression = None; Environment = newEnv}
     match (env.TryFind id) with
     | None | Some (List _) ->
         evalList expressions outputWriter state
@@ -63,17 +65,17 @@ and private computeListAssignmentWithRange
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
         
-    let _, env = state
+    let env = state.Environment
     match (env.TryFind id) with
     | None | Some (List _) ->
         let lowerEvalResult = eval outputWriter state lowerBoundExpression
         let upperEvalResult = eval outputWriter state upperBoundExpression
         match (lowerEvalResult, upperEvalResult) with
-        | (Ok low, Ok up) ->
+        | Ok low, Ok up ->
             let newEnv = env |> Map.add id (List [|low..up|])
-            Ok (None, newEnv)
-        | (Error msg, _) -> Error msg
-        | (_, Error msg) -> Error msg
+            Ok {state with LastExpression = None; Environment = newEnv}
+        | Error msg, _ -> Error msg
+        | _, Error msg -> Error msg
     | _ -> Error $"{id} ist keine Liste und kann keine entsprechenden Werte zugewiesen bekommen."
     
     
@@ -83,18 +85,18 @@ and private computeListInitialisationWithValue
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
-    let _, env = state
+    let env = state.Environment
     match (env.TryFind listName) with
     | None | Some (List _) ->
         let sizeEvalResult = eval outputWriter state sizeExpression
         let valueEvalResult = eval outputWriter state valueExpression
         match (sizeEvalResult, valueEvalResult) with
-        | (Ok size, Ok value) ->
+        | Ok size, Ok value ->
             let newList = Array.create (int size) value
             let newEnv = env |> Map.add listName (List newList)
-            Ok (None, newEnv)
-        | (Error msg, _) -> Error msg
-        | (_, Error msg) -> Error msg
+            Ok {state with LastExpression = None; Environment = newEnv}
+        | Error msg, _ -> Error msg
+        | _, Error msg -> Error msg
     | _ -> Error $"{id} ist keine Liste und kann keine entsprechenden Werte zugewiesen bekommen."
     
             
@@ -104,15 +106,15 @@ and private computeListInitialisationWithCode
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
-    let _, env = state
+    let env = state.Environment
     let generateListElement i state =
         let generatorResult =
             computeAssignment (indexName, LiteralNumber i) outputWriter state
             >>= compute generatorCode outputWriter
         match generatorResult with
         | Error msg -> Error $"Fehler beim Generieren des Listenelements: {msg}"
-        | Ok (None, _) -> Error $"Fehler beim Generieren des Listenelements: Der Generatorcode hat keinen Wert zurückgegeben."
-        | Ok (Some x, _) -> Ok x
+        | Ok {LastExpression = None} -> Error $"Fehler beim Generieren des Listenelements: Der Generatorcode hat keinen Wert zurückgegeben."
+        | Ok {LastExpression = Some x} -> Ok x
     match (env.TryFind listName) with
     | None | Some (List _) ->
         let sizeEvalResult = eval outputWriter state sizeExpression
@@ -138,7 +140,11 @@ and private computeListInitialisationWithCode
                     generationError
                 else
                     let newEnv = env |> Map.add listName (List newList)
-                    Ok (None, newEnv)
+                    Ok {
+                        LastExpression = None
+                        Environment = newEnv
+                        BreakFlag = false
+                        ReturnFlag = false }
         | Error msg -> Error msg
     | _ -> Error $"{id} ist keine Liste und kann keine entsprechenden Werte zugewiesen bekommen."
     
@@ -146,19 +152,19 @@ and private computeListElementAssignment
         (id, indexExpression, valueExpression)
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
-    let _, env = state
+    let env = state.Environment
     match (env.TryFind id) with
     | Some (List xs) ->
         let indexEvalResult = eval outputWriter state indexExpression
         let valueEvalResult = eval outputWriter state valueExpression
         match (indexEvalResult, valueEvalResult ) with
-        | (Ok index, Ok value) ->
+        | Ok index, Ok value ->
             let trueIndex = if index < 0.0 then xs.Length + int index else int index
             if trueIndex >= 0 && trueIndex < xs.Length then
                 xs[trueIndex] <- value
-            Ok (Some value, env)
-        | (Error msg, _) -> Error msg
-        | (_, Error msg) -> Error msg
+            Ok {state with LastExpression = Some value; Environment = env}
+        | Error msg, _ -> Error msg
+        | _, Error msg -> Error msg
     | _ -> Error $"{id} ist keine Liste."
     
 
@@ -166,10 +172,10 @@ and private computeFunctionDefinition
         (id, argNames, body)
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
-    let lastExp, env = state
+    let lastExp, env = state.LastExpression, state.Environment
     let addFunctionToState () =
         let newEnv = env |> Map.add id (CustomFunction (argNames, body))
-        Ok (lastExp, newEnv)
+        Ok {state with LastExpression = lastExp; Environment = newEnv}
     match (env.TryFind id) with
     | Some _ -> Error $"Der Name {id} wird bereits verwendet und kann nicht neu definiert werden."
     | None -> addFunctionToState ()
@@ -180,7 +186,7 @@ and private computeListIteration
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
-    let _, env = state
+    let env = state.Environment
     let computeIteration state value =
         computeAssignment (valueName, LiteralNumber value) outputWriter state
         >>= compute loopBody outputWriter
@@ -200,45 +206,51 @@ and compute
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
-    let _, env = state
-    match program with
-    | [] -> Ok state
-    | instruction :: tail ->
-        match instruction with
-        | Expression exp ->
-            match eval outputWriter state exp with
-            | Ok x -> compute tail outputWriter (Some x, env)
-            | Error e -> Error e
-        | Assignment (id,exp) ->
-            computeAssignment (id, exp) outputWriter state
-            >>= compute tail outputWriter
-        | FunctionDefinition (id, argNames, body) ->
-            computeFunctionDefinition (id, argNames, body) state
-            >>= compute tail outputWriter
-        | Loop (con, rep, body) ->
-            computeLoop con rep body outputWriter state
-            >>= compute tail outputWriter
-        | OperatorDefinition (BinaryOperator opName, leftName, rightName, body) ->
-            computeFunctionDefinition (Identifier opName, [leftName; rightName], body) state
-            >>= compute tail outputWriter
-        | ListAssignment(listName, expressions) ->
-            computeListAssignment (listName, expressions) outputWriter state
-            >>= compute tail outputWriter
-        | ListAssignmentWithRange (listName, lowerBound, upperBound) ->
-            computeListAssignmentWithRange (listName, lowerBound, upperBound) outputWriter state
-            >>= compute tail outputWriter
-        | ListInitialisationWithValue (listName, size, value) ->
-            computeListInitialisationWithValue (listName, size, value) outputWriter state
-            >>= compute tail outputWriter
-        | ListInitialisationWithCode(listName, size, indexName, instructions) ->
-            computeListInitialisationWithCode (listName, size, indexName, instructions) outputWriter state
-            >>= compute tail outputWriter
-        | ListElementAssignment(identifier, indexExpression, valueExpression) ->
-            computeListElementAssignment (identifier, indexExpression, valueExpression) outputWriter state
-            >>= compute tail outputWriter
-        | Iteration(listName, elementName, loopBody) ->
-            computeListIteration (listName, elementName, loopBody) outputWriter state
-            >>= compute tail outputWriter
+    if state.BreakFlag || state.ReturnFlag then Ok state else
+        match program with
+        | [] -> Ok state
+        | instruction :: tail ->
+            match instruction with
+            | Break ->
+                Ok {state with BreakFlag = true}
+            | Return exp ->
+                match eval outputWriter state exp with
+                | Ok x -> Ok {state with ReturnFlag = true; LastExpression = Some x}
+                | Error e -> Error e
+            | Expression exp ->
+                match eval outputWriter state exp with
+                | Ok x -> compute tail outputWriter {state with LastExpression = Some x}
+                | Error e -> Error e
+            | Assignment (id,exp) ->
+                computeAssignment (id, exp) outputWriter state
+                >>= compute tail outputWriter
+            | FunctionDefinition (id, argNames, body) ->
+                computeFunctionDefinition (id, argNames, body) state
+                >>= compute tail outputWriter
+            | Loop (con, rep, body) ->
+                computeLoop con rep body outputWriter state
+                >>= compute tail outputWriter
+            | OperatorDefinition (BinaryOperator opName, leftName, rightName, body) ->
+                computeFunctionDefinition (Identifier opName, [leftName; rightName], body) state
+                >>= compute tail outputWriter
+            | ListAssignment(listName, expressions) ->
+                computeListAssignment (listName, expressions) outputWriter state
+                >>= compute tail outputWriter
+            | ListAssignmentWithRange (listName, lowerBound, upperBound) ->
+                computeListAssignmentWithRange (listName, lowerBound, upperBound) outputWriter state
+                >>= compute tail outputWriter
+            | ListInitialisationWithValue (listName, size, value) ->
+                computeListInitialisationWithValue (listName, size, value) outputWriter state
+                >>= compute tail outputWriter
+            | ListInitialisationWithCode(listName, size, indexName, instructions) ->
+                computeListInitialisationWithCode (listName, size, indexName, instructions) outputWriter state
+                >>= compute tail outputWriter
+            | ListElementAssignment(identifier, indexExpression, valueExpression) ->
+                computeListElementAssignment (identifier, indexExpression, valueExpression) outputWriter state
+                >>= compute tail outputWriter
+            | Iteration(listName, elementName, loopBody) ->
+                computeListIteration (listName, elementName, loopBody) outputWriter state
+                >>= compute tail outputWriter
 
 
 and private eval
@@ -246,7 +258,8 @@ and private eval
         (state: ComputationState)
         (exp: Expression) : InterpreterResult<float> =
     
-    let _, env = state
+    let env = state.Environment
+    
     match exp with
     | LiteralNumber x -> Ok x
     | VariableReference id ->
@@ -286,6 +299,8 @@ and private eval
             >>= (evalCustomFunction (argNames, body) outputWriter state)
         | Some _ -> Error $"{id} ist kein Operator."
         | None -> Error $"Der Operator %A{op} ist nicht definiert"
+    | ParenthesizedExpression expression ->
+        eval outputWriter state expression
 
 
 and private evalListAccess
@@ -320,7 +335,7 @@ and private evalCustomFunction
         (outputWriter: IOutputWriter)
         (state: ComputationState)
         (args: float list) : InterpreterResult<float> =
-    let _, env = state
+    let env = state.Environment
     if argNames.Length <> args.Length then
         Error (sprintf "Diese Funktion erwarte %i Argumente - es wurden aber %i übergeben." argNames.Length args.Length)
     else
@@ -328,8 +343,13 @@ and private evalCustomFunction
         let scopedVariables = args |> List.map Variable |> List.zip argNames
         let scopedFunctions = env |> Map.filter functionFilter |> Map.toList
         let functionEnv = Map (scopedVariables @ scopedFunctions)
-        let returnValue = compute body outputWriter (None, functionEnv)
+        let functionComputationState = {
+            LastExpression = None
+            Environment = functionEnv
+            BreakFlag = false
+            ReturnFlag = false }
+        let returnValue = compute body outputWriter functionComputationState
         match returnValue with
         | Error e -> Error e
-        | Ok (None, _) -> Error "Die Funktion hat keinen Wert zurückgegeben"
-        | Ok (Some x, _) -> Ok x
+        | Ok {LastExpression = None} -> Error "Die Funktion hat keinen Wert zurückgegeben"
+        | Ok {LastExpression = Some x} -> Ok x

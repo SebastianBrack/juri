@@ -11,6 +11,7 @@ type Expression =
     | VariableReference of Identifier
     | FunctionCall of functionName: Identifier * arguments: Expression list
     | Binary of operator: BinaryOperator * left: Expression * right: Expression
+    | ParenthesizedExpression of Expression
 
 type Instruction =
     | Expression of Expression
@@ -24,6 +25,8 @@ type Instruction =
     | Loop of condition: Expression * repeat: bool * loopBody: Instruction list
     | Iteration of list: Identifier * elementName: Identifier * loopBody: Instruction list
     | OperatorDefinition of operator: BinaryOperator * leftArg: Identifier * rightArg: Identifier * functionBody: Codeblock
+    | Break
+    | Return of Expression
 
 
 and Codeblock = Instruction list
