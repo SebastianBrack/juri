@@ -48,7 +48,7 @@ let private buildinPrintChar : ProvidedFunction =
 
 
 let private buildinInput : ProvidedFunction =
-    fun out args ->
+    fun _ args ->
         args
         |> List.map char 
         |> String.Concat
