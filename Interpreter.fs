@@ -195,6 +195,7 @@ and private computeListIteration
             Ok state
         else
             computeIteration state xs[pos]
+            |> Runtime.map (fun state -> { state with BreakFlag = false; ReturnFlag = false })
             >>= iterate xs (pos+1) 
     match (env.TryFind listName) with
     | Some (List xs) -> iterate xs 0 state

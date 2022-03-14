@@ -18,6 +18,9 @@ type InterpreterResult<'T> =
             | Error e -> Error e
             | Ok x -> g x
 
+let map f = function
+    | Ok r -> Ok (f r)
+    | Error msg -> Error msg
 
 type ProvidedFunction =
     IOutputWriter -> float list -> InterpreterResult<float>
