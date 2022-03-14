@@ -30,7 +30,7 @@ type public Interpreter() =
             outputStreams.Error.Write(msg)
     member this.ExecuteProgram() =
         let outputWriter = StreamWriter(outputStreams)
-        let initialState : ComputationState = (None, createEnvWithCoreLibFunctions())
+        let initialState = { ComputationState.Default with Environment = createEnvWithCoreLibFunctions () }
         match compute program outputWriter initialState with
         | Ok _      -> ()
         | Error msg -> outputStreams.Error.Write(msg)

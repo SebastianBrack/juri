@@ -104,6 +104,12 @@ let rangeOperator =
 let jinit =
     pstring "init" .>> ws
     
+let jbreak =
+    pstring "break" .>> ws
+    
+let jreturn =
+    pstring "return" .>> ws
+    
 let iterate =
     pstring "iterate" .>> ws
     
@@ -401,6 +407,21 @@ let private loop =
 
 
 
+let private breakStatement =
+    jbreak
+    .>> newlineEOS .>> emptyLines
+    |>> (fun _ -> Break)
+    
+
+
+let private returnStatement =
+    jreturn
+    >>. expression
+    .>> newlineEOS .>> emptyLines
+    |>> Return
+
+
+
 instructionImpl.Value <-
     [   binaryOperatorDefinition
         loop
@@ -412,6 +433,8 @@ instructionImpl.Value <-
         listInitialisationWithValue
         listElementAssignment
         listIteration
+        breakStatement
+        returnStatement
         instructionExpression ]
     |> choice
 

@@ -25,6 +25,8 @@ type Instruction =
     | Loop of condition: Expression * repeat: bool * loopBody: Instruction list
     | Iteration of list: Identifier * elementName: Identifier * loopBody: Instruction list
     | OperatorDefinition of operator: BinaryOperator * leftArg: Identifier * rightArg: Identifier * functionBody: Codeblock
+    | Break
+    | Return of Expression
 
 
 and Codeblock = Instruction list

@@ -34,7 +34,18 @@ and Environment =
     Map<Identifier, EnvironmentObject>
 
 
-and ComputationState = float Option * Environment
+and ComputationState =
+    {
+        LastExpression : float option
+        BreakFlag : bool
+        ReturnFlag : bool
+        Environment : Environment
+    }
+    static member Default = {
+        LastExpression = None
+        BreakFlag = false
+        ReturnFlag = false
+        Environment = Map.empty }
 
 let evalResultPrinter
         printOnlyErrors
