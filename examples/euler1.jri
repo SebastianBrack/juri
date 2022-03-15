@@ -10,4 +10,4 @@ if x < 1000 repeat
         sum = sum + x
     x = x+1
     
-print(sum)
+printn(sum)

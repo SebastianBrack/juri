@@ -10,6 +10,6 @@ if n1 < 4000000 repeat
     n1 = n2
     n2 = nth
 
-print(s)
+printn(s)
 
     
