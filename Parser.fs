@@ -1,8 +1,8 @@
 module Juri.Internal.Parser
 
 open System
-open ParserCombinators
 open LanguageModel
+open ParserCombinators
 
 type IndentationType =
     | Tabs
@@ -90,7 +90,34 @@ let private operator =
 
     many1 operatorChar
     .>> ws
-    |>> (String.Concat >> BinaryOperator)
+    |>> String.Concat
+    
+    
+    
+let private operatorComparison =
+    let isComparisonOperator _ str =
+        str |> Seq.exists (fun c -> c = '=' || c = '<' || c = '>' || c = '!')
+        
+    operator |> satisfies isComparisonOperator
+    |>> BinaryOperator
+
+
+
+let private operatorProduct =
+    let isProductOperator _ str =
+        str |> Seq.exists (fun c -> c = '*' || c = '/' || c = '%')
+        
+    operator |> satisfies isProductOperator
+    |>> BinaryOperator
+
+
+
+let private operatorSum =
+    let isSumOperator _ str =
+        str |> Seq.exists (fun c -> c = '+' || c = '-')
+        
+    operator |> satisfies isSumOperator
+    |>> BinaryOperator
 
 
 
@@ -142,6 +169,15 @@ let openBracket =
 
 let closingBracket =
     pchar ']' .>> ws |> deferr "Es fehlt eine schließende Klammer"
+    
+let private jnot =
+    pstring "not" .>> ws
+    
+let private jand =
+    pstring "and" .>> ws
+    
+let private jor =
+    pstring "or" .>> ws
 
 // expressions
 let private expression, expressionImpl = createParserForwarder ()
@@ -198,20 +234,33 @@ let private listAccess =
     |>> fun (index, id) -> ListAccess (id, index)
 
 
-let private binaryOperation =
-    (parenthesizedExpression <|> listAccess <|> listLength <|> number <|> variableReference <|> functionCall )
-    .>>. operator
-    .>>. (expression |> deferr "Es fehlt ein Operand." |> failAsFatal)
-    |>> fun ((left, op), right) -> Binary (op, left, right)
-// 1 + 2 + 3 + 4
-// (1+2) + 3
-// 1 + (2+ (3+4))
+
+// Binary Expressions :O
+let listToTree (single, chain): Expression =
+    let rec traverse left rest =
+        match rest with
+        | [] -> left
+        | (op, right) :: tail -> Binary (op, left, traverse right tail)
+    traverse single chain       
+
+let private product =
+    expression .>>. many (operatorProduct .>>. expression)
+    |>> listToTree
+    
+let private sum =
+    product .>>. many (operatorSum .>>. product)
+    |>> listToTree
+    
+let private comparison =
+    sum .>>. many (operatorComparison .>>. sum)
+    |>> listToTree
+
 
 
 expressionImpl.Value <-
     [
-        binaryOperation
         parenthesizedExpression
+        comparison
         listAccess
         functionCall
         variableReference
@@ -396,7 +445,7 @@ let private binaryOperatorDefinition =
     .>>. (identifier |> failAsFatal)
     .>> newline .>> emptyLines
     .>>. (codeblock |> failAsFatal)
-    |>> fun (((op, left), right), body) -> OperatorDefinition (op, left, right, body)
+    |>> fun (((op, left), right), body) -> OperatorDefinition (BinaryOperator op, left, right, body)
 
 
 
