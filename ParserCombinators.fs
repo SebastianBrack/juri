@@ -161,7 +161,7 @@ let updateContext f parser =
 
 
 
-/// The overall Parser succseeds if the given predicate returns true and fails if it returns false
+/// The overall Parser succeeds if the given predicate returns true and fails if it returns false
 let satisfies predicate parser =
     fun (stream: CharStream<'c>) ->
         let cOriginal = stream.GetContext()
@@ -172,7 +172,7 @@ let satisfies predicate parser =
         | Fatal (m,e) ->
             Fatal (m,e)
         | Success (r,c,p) ->
-            match stream.GetContext() |> predicate r with
+            match predicate r (stream.GetContext()) with
             | false ->
                 stream.SetContext(cOriginal)
                 stream.SetPosition(pOriginal)
@@ -180,6 +180,24 @@ let satisfies predicate parser =
             | true  ->
                 Success (r,c,p)
     |> Parser
+    
+    
+    
+/// makes the parser not consume anything of the stream even if it succeeds.
+let lookAhead parser =
+    fun (stream: CharStream<'c>) ->
+        let pOriginal = stream.GetPosition()
+        match run parser stream with
+        | Failure (m,e) ->
+            Failure (m,e)
+        | Fatal (m,e) ->
+            Fatal (m,e)
+        | Success (r,c,p) ->
+            stream.SetContext(c)
+            stream.SetPosition(pOriginal)
+            Success (r,c,pOriginal)
+    |> Parser
+
 
 
 /// Chains two parsers together and combines the results into a tupel.

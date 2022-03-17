@@ -1,8 +1,8 @@
 module Juri.Internal.Parser
 
 open System
-open ParserCombinators
 open LanguageModel
+open ParserCombinators
 
 type IndentationType =
     | Tabs
@@ -12,20 +12,14 @@ type IndentationType =
 type JuriContext =
     {
         IndentationType : IndentationType
-        InFunctionDefinition : bool
-        InLoop : bool
         IndentationStack : int list
-        Variables : Identifier list
-        Functions : Identifier list
+        possibleBinaryExpression : bool
     }
     static member Default =
         {
             IndentationType = Unknown
-            InFunctionDefinition = false
-            InLoop = false
             IndentationStack = [0]
-            Variables = []
-            Functions = []
+            possibleBinaryExpression = true
         }
 
 
@@ -91,10 +85,32 @@ let private operator =
     many1 operatorChar
     .>> ws
     |>> (String.Concat >> BinaryOperator)
+    
+let operatorPrecedence (BinaryOperator str) =
+    let charMapper = function
+        | '=' | '<' | '>' | '!' -> 2
+        | '+' | '-' -> 1
+        | '*' | '/' | '%' -> 0
+        | _ -> 0
+    str
+    |> Seq.map charMapper
+    |> Seq.max
+    
+let operatorComparison =
+    let isComparisonOperator op _ = operatorPrecedence op = 2
+    operator |> satisfies isComparisonOperator
+
+let operatorSum =
+    let isSumOperator op _ = operatorPrecedence op = 1
+    operator |> satisfies isSumOperator
+
+let operatorProduct =
+    let isProductOperator op _ = operatorPrecedence op = 0
+    operator |> satisfies isProductOperator
 
 
 
-// keywords and controll chars
+// keywords and control chars
 let eq =
     pchar '=' .>> ws
     
@@ -142,9 +158,19 @@ let openBracket =
 
 let closingBracket =
     pchar ']' .>> ws |> deferr "Es fehlt eine schließende Klammer"
+    
+let private jnot =
+    pstring "not" .>> ws
+    
+let private jand =
+    pstring "and" .>> ws
+    
+let private jor =
+    pstring "or" .>> ws
 
 // expressions
 let private expression, expressionImpl = createParserForwarder ()
+let private singleExpression, singleExpressionImpl = createParserForwarder ()
 
 
 
@@ -198,19 +224,32 @@ let private listAccess =
     |>> fun (index, id) -> ListAccess (id, index)
 
 
-let private binaryOperation =
-    (parenthesizedExpression <|> listAccess <|> listLength <|> number <|> variableReference <|> functionCall )
-    .>>. operator
-    .>>. (expression |> deferr "Es fehlt ein Operand." |> failAsFatal)
-    |>> fun ((left, op), right) -> Binary (op, left, right)
-// 1 + 2 + 3 + 4
-// (1+2) + 3
-// 1 + (2+ (3+4))
+
+// Binary Expressions :O
+let private listToTree (single, chain): Expression =
+    let rec traverse left rest =
+        match rest with
+        | [] -> left
+        | (op, right) :: tail -> Binary (op, left, traverse right tail)
+    traverse single chain
+
+let private product =
+    singleExpression
+    .>>. many (operatorProduct .>>. singleExpression)
+    |>> listToTree
+    
+let private sum =
+    product .>>. many (operatorSum .>>. product)
+    |>> listToTree
+    
+let private comparison =
+    sum .>>. many (operatorComparison .>>. sum)
+    |>> listToTree
 
 
-expressionImpl.Value <-
+
+singleExpressionImpl.Value <-
     [
-        binaryOperation
         parenthesizedExpression
         listAccess
         functionCall
@@ -219,6 +258,10 @@ expressionImpl.Value <-
         number
     ]
     |> choice
+    
+
+expressionImpl.Value <-
+    either comparison singleExpression
     .>> ws
     |> deferr "Es wird ein Ausdruck erwartet."
 
@@ -232,7 +275,6 @@ expressionImpl.Value <-
 
 // instructions
 let private instruction, instructionImpl = createParserForwarder ()
-
 
 
 let emptyLines =
@@ -472,7 +514,7 @@ let parseProgram (text: char seq) =
         //stream.PrintError(m,e)
         ()
     | Success(r,_,_) ->
-        //printfn "%A" r
+        printfn "%A" r
         //printfn "%A" (stream.GetContext())
         ()
     parsingResult
