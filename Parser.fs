@@ -33,6 +33,7 @@ let newlineEOS = either newline EOS
 
 
 
+
 let digit =
         "0123456789"
         |> Set |> anyOf
@@ -342,6 +343,7 @@ let private codeblock =
 
 
 
+
 let private instructionExpression =
     expression
     .>> newlineEOS .>> emptyLines
@@ -495,7 +497,7 @@ instructionImpl.Value <-
 
 
 
-let private program =
+let juriProgram =
     emptyLines
     >>. many1 instruction
     .>> emptyLines
@@ -505,7 +507,7 @@ let private program =
 
 let parseProgram (text: char seq) =
     let stream = CharStream(text, JuriContext.Default)
-    let parsingResult = stream.RunParser(program)
+    let parsingResult = stream.RunParser(juriProgram)
     match parsingResult with
     | Failure (m,e) ->
         //stream.PrintError(m,e)

@@ -8,28 +8,37 @@ open System.IO
 open Interpreter
 open CoreLib
 open Runtime
+open Preprocessor
 
-let private runScript script =
+            
+
+let private runScript (script: string) =
+  
+    
     let outputWriter : IOutputWriter = ConsoleWriter()
-    let initialState = { ComputationState.Default with Environment = createEnvWithCoreLibFunctions () }
-    match parseProgram (script+"\n") with
-    | Success (r,_,_) -> 
-        compute r outputWriter initialState
-        |> evalResultPrinter true outputWriter
-        |> ignore
-        0
-    | Failure (msg, _) ->
-        outputWriter.WriteERR(msg)
-        0
-    | Fatal (msg, _) ->
-        outputWriter.WriteERR(msg)
-        0
+    
+    match processImports (script+"\n") outputWriter with
+        | Error msg -> outputWriter.WriteERR(msg) ;0
+        | Ok (state,steam) -> 
+            match steam.RunParser(juriProgram)  with
+            | Success (r,_,_) -> 
+                compute r outputWriter state
+                |> evalResultPrinter true outputWriter
+                |> ignore
+                0
+            | Failure (msg, _) ->
+                outputWriter.WriteERR(msg)
+                0
+            | Fatal (msg, _) ->
+                outputWriter.WriteERR(msg)
+                0
 
 let run argv =
     match argv with
     | [||] ->
         printfn "juri repl (juri version 0.1.0)"
-        startRepl() |> ignore; 1
+        startRepl()
+        |> ignore; 1
     | [|path|] ->
         if File.Exists(path) then
             printfn $"executing file: \"{path}\""

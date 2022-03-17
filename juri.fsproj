@@ -12,6 +12,7 @@
     <Compile Include="CoreLib.fs" />
     <Compile Include="Interpreter.fs" />
     <Compile Include="Parser.fs" />
+    <Compile Include="Preprocessor.fs" />
     <Compile Include="Repl.fs" />
     <Compile Include="CLI.fs" />
     <Content Include="examples\euler1.jri" />
