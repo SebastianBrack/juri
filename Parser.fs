@@ -516,7 +516,7 @@ let parseProgram (text: char seq) =
         //stream.PrintError(m,e)
         ()
     | Success(r,_,_) ->
-        printfn "%A" r
+        //printfn "%A" r
         //printfn "%A" (stream.GetContext())
         ()
     parsingResult
