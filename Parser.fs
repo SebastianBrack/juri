@@ -13,13 +13,13 @@ type JuriContext =
     {
         IndentationType : IndentationType
         IndentationStack : int list
-        possibleBinaryExpression : bool
+        Line : int
     }
     static member Default =
         {
             IndentationType = Unknown
             IndentationStack = [0]
-            possibleBinaryExpression = true
+            Line = 1
         }
 
 
@@ -27,7 +27,7 @@ type JuriContext =
 let private ws =
     many (pchar ' ' <|> pchar '\t')
 
-let newline = createNewline<JuriContext> ()
+let newline = createNewline<JuriContext> () |> updateContext (fun _ c -> { c with Line = c.Line + 1 })
 let EOS = createEOS<JuriContext>()
 let newlineEOS = either newline EOS
 
@@ -472,7 +472,7 @@ let private breakStatement =
 
 let private returnStatement =
     jreturn
-    >>. expression
+    >>. (expression |> failAsFatal)
     .>> newlineEOS .>> emptyLines
     |>> Return
 
