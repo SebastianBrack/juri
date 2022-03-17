@@ -16,7 +16,7 @@ if a < PERIMETER1 repeat
         first=f+f1
         second=c*c
         if first == second
-            print(a*b*c)
+            printn(a*b*c)
             a=PERIMETER1
             b=PERIMETER1 
            
