@@ -34,16 +34,6 @@ let private buildinPrint : ProvidedFunction =
             args
             |> List.map (fun x -> sprintf "%f " x)
             |> String.Concat
-            |> sprintf "%s"
-        out.WriteSTD(outputString)
-        Ok 0.
-
-let private buildinPrintn : ProvidedFunction =
-    fun out args ->
-        let outputString =
-            args
-            |> List.map (fun x -> sprintf "%f " x)
-            |> String.Concat
             |> sprintf "%s\n"
         out.WriteSTD(outputString)
         Ok 0.
@@ -223,7 +213,6 @@ let createEnvWithCoreLibFunctions () : Environment =
         (Identifier "bnd", ProvidedFunction buildinInBoundarys)
         (Identifier "eq", ProvidedFunction buildinEquals)
         (Identifier "print", ProvidedFunction buildinPrint)
-        (Identifier "printn", ProvidedFunction buildinPrintn)
         (Identifier "printc", ProvidedFunction buildinPrintChar)
         (Identifier "input", ProvidedFunction buildinInput)
         (Identifier "rand", ProvidedFunction buildinRandom)
