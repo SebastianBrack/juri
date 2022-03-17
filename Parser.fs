@@ -12,20 +12,14 @@ type IndentationType =
 type JuriContext =
     {
         IndentationType : IndentationType
-        InFunctionDefinition : bool
-        InLoop : bool
         IndentationStack : int list
-        Variables : Identifier list
-        Functions : Identifier list
+        possibleBinaryExpression : bool
     }
     static member Default =
         {
             IndentationType = Unknown
-            InFunctionDefinition = false
-            InLoop = false
             IndentationStack = [0]
-            Variables = []
-            Functions = []
+            possibleBinaryExpression = true
         }
 
 
@@ -90,38 +84,33 @@ let private operator =
 
     many1 operatorChar
     .>> ws
-    |>> String.Concat
+    |>> (String.Concat >> BinaryOperator)
     
+let operatorPrecedence (BinaryOperator str) =
+    let charMapper = function
+        | '=' | '<' | '>' | '!' -> 2
+        | '+' | '-' -> 1
+        | '*' | '/' | '%' -> 0
+        | _ -> 0
+    str
+    |> Seq.map charMapper
+    |> Seq.max
     
-    
-let private operatorComparison =
-    let isComparisonOperator _ str =
-        str |> Seq.exists (fun c -> c = '=' || c = '<' || c = '>' || c = '!')
-        
+let operatorComparison =
+    let isComparisonOperator op _ = operatorPrecedence op = 2
     operator |> satisfies isComparisonOperator
-    |>> BinaryOperator
 
-
-
-let private operatorProduct =
-    let isProductOperator _ str =
-        str |> Seq.exists (fun c -> c = '*' || c = '/' || c = '%')
-        
-    operator |> satisfies isProductOperator
-    |>> BinaryOperator
-
-
-
-let private operatorSum =
-    let isSumOperator _ str =
-        str |> Seq.exists (fun c -> c = '+' || c = '-')
-        
+let operatorSum =
+    let isSumOperator op _ = operatorPrecedence op = 1
     operator |> satisfies isSumOperator
-    |>> BinaryOperator
+
+let operatorProduct =
+    let isProductOperator op _ = operatorPrecedence op = 0
+    operator |> satisfies isProductOperator
 
 
 
-// keywords and controll chars
+// keywords and control chars
 let eq =
     pchar '=' .>> ws
     
@@ -181,6 +170,7 @@ let private jor =
 
 // expressions
 let private expression, expressionImpl = createParserForwarder ()
+let private singleExpression, singleExpressionImpl = createParserForwarder ()
 
 
 
@@ -236,15 +226,16 @@ let private listAccess =
 
 
 // Binary Expressions :O
-let listToTree (single, chain): Expression =
+let private listToTree (single, chain): Expression =
     let rec traverse left rest =
         match rest with
         | [] -> left
         | (op, right) :: tail -> Binary (op, left, traverse right tail)
-    traverse single chain       
+    traverse single chain
 
 let private product =
-    expression .>>. many (operatorProduct .>>. expression)
+    singleExpression
+    .>>. many (operatorProduct .>>. singleExpression)
     |>> listToTree
     
 let private sum =
@@ -257,10 +248,9 @@ let private comparison =
 
 
 
-expressionImpl.Value <-
+singleExpressionImpl.Value <-
     [
         parenthesizedExpression
-        comparison
         listAccess
         functionCall
         variableReference
@@ -268,6 +258,10 @@ expressionImpl.Value <-
         number
     ]
     |> choice
+    
+
+expressionImpl.Value <-
+    either comparison singleExpression
     .>> ws
     |> deferr "Es wird ein Ausdruck erwartet."
 
@@ -281,7 +275,6 @@ expressionImpl.Value <-
 
 // instructions
 let private instruction, instructionImpl = createParserForwarder ()
-
 
 
 let emptyLines =
@@ -445,7 +438,7 @@ let private binaryOperatorDefinition =
     .>>. (identifier |> failAsFatal)
     .>> newline .>> emptyLines
     .>>. (codeblock |> failAsFatal)
-    |>> fun (((op, left), right), body) -> OperatorDefinition (BinaryOperator op, left, right, body)
+    |>> fun (((op, left), right), body) -> OperatorDefinition (op, left, right, body)
 
 
 
@@ -521,7 +514,7 @@ let parseProgram (text: char seq) =
         //stream.PrintError(m,e)
         ()
     | Success(r,_,_) ->
-        //printfn "%A" r
+        printfn "%A" r
         //printfn "%A" (stream.GetContext())
         ()
     parsingResult
