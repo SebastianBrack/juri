@@ -1,0 +1,5 @@
+printn(3)
+
+fun smallpp x y
+    if x < y then return x
+    y
