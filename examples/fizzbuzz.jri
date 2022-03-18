@@ -1,0 +1,33 @@
+# Jede durch drei teilbare Zahl wird jedoch durch das Wort „fizz“
+# und jede durch fünf teilbare Zahl durch das Wort „buzz“ ersetzt.
+# Durch 15 teilbare Zahlen werden zu „fizz buzz“.
+
+# 102 105 122 122 fizz
+# 98 117 122 122 buzz
+
+i = 1
+
+fun a l r
+    return l*r
+
+if i < 100 repeat
+    t=0
+    t1=0
+    help=0
+    if i%3==0
+        t=1
+    if i%5==0
+        t1=1
+    if a(t t1)
+        printc(102 105 122 122 98 117 122 122)
+        help=1
+    if help == 0
+        if t
+            printc(102 105 122 122)
+        if t1
+            printc(98 117 122 122)
+        if 0 == t + t1
+            printn(i)
+    i=i+1
+
+    
