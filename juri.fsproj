@@ -21,6 +21,7 @@
     <Content Include="examples\test.jri" />
     <Content Include="examples\test2.jri" />
     <Content Include="examples\test3.jri" />
+    <Content Include="examples\primzahlen.jri" />
     <Compile Include="JuriInterpreter.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

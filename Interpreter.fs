@@ -194,9 +194,9 @@ and private computeListIteration
         if pos = xs.Length then
             Ok state
         else
-            computeIteration state xs[pos]
-            |> Runtime.map (fun state -> { state with BreakFlag = false; ReturnFlag = false })
-            >>= iterate xs (pos+1) 
+            match computeIteration state xs[pos] with
+            | Error e -> Error e
+            | Ok newState -> iterate xs (pos+1) { newState with BreakFlag = false; ReturnFlag = false } 
     match (env.TryFind listName) with
     | Some (List xs) -> iterate xs 0 state
     | _ -> Error $"{listName} ist keine Liste."
