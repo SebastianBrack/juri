@@ -207,53 +207,53 @@ and compute
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
-    if state.BreakFlag || state.ReturnFlag then Ok state else
-        match program with
-        | [] -> Ok state
-        | (instruction, line) :: tail ->
-            let mutable discardTail = false
-            let computationResult =
-                match instruction with
-                | Break ->
+    match program with
+    | [] -> Ok state
+    | _ when state.BreakFlag || state.ReturnFlag -> Ok state
+    | (instruction, line) :: tail ->
+        let mutable discardTail = false
+        let computationResult =
+            match instruction with
+            | Break ->
+                discardTail <- true
+                Ok {state with BreakFlag = true}
+            | Return exp ->
+                match eval outputWriter state exp with
+                | Ok x ->
                     discardTail <- true
-                    Ok {state with BreakFlag = true}
-                | Return exp ->
-                    match eval outputWriter state exp with
-                    | Ok x ->
-                        discardTail <- true
-                        Ok {state with ReturnFlag = true; LastExpression = Some x}
-                    | Error e ->
-                        Error e
-                | Expression exp ->
-                    match eval outputWriter state exp with
-                    | Ok x -> Ok {state with LastExpression = Some x}
-                    | Error e -> Error e
-                | Assignment (id,exp) ->
-                    computeAssignment (id, exp) outputWriter state
-                | FunctionDefinition (id, argNames, body) ->
-                    computeFunctionDefinition (id, argNames, body) state
-                | Loop (con, rep, body) ->
-                    computeLoop con rep body outputWriter state
-                | OperatorDefinition (BinaryOperator opName, leftName, rightName, body) ->
-                    computeFunctionDefinition (Identifier opName, [leftName; rightName], body) state
-                | ListAssignment(listName, expressions) ->
-                    computeListAssignment (listName, expressions) outputWriter state
-                | ListAssignmentWithRange (listName, lowerBound, upperBound) ->
-                    computeListAssignmentWithRange (listName, lowerBound, upperBound) outputWriter state
-                | ListInitialisationWithValue (listName, size, value) ->
-                    computeListInitialisationWithValue (listName, size, value) outputWriter state
-                | ListInitialisationWithCode(listName, size, indexName, instructions) ->
-                    computeListInitialisationWithCode (listName, size, indexName, instructions) outputWriter state
-                | ListElementAssignment(identifier, indexExpression, valueExpression) ->
-                    computeListElementAssignment (identifier, indexExpression, valueExpression) outputWriter state
-                | Iteration(listName, elementName, loopBody) ->
-                    computeListIteration (listName, elementName, loopBody) outputWriter state
-            
-            match computationResult with
-            | Ok newState -> compute tail outputWriter newState
-            | Error msg ->
-                outputWriter.WriteERR(msg, line)
-                Error msg
+                    Ok {state with ReturnFlag = true; LastExpression = Some x}
+                | Error e ->
+                    Error e
+            | Expression exp ->
+                match eval outputWriter state exp with
+                | Ok x -> Ok {state with LastExpression = Some x}
+                | Error e -> Error e
+            | Assignment (id,exp) ->
+                computeAssignment (id, exp) outputWriter state
+            | FunctionDefinition (id, argNames, body) ->
+                computeFunctionDefinition (id, argNames, body) state
+            | Loop (con, rep, body) ->
+                computeLoop con rep body outputWriter state
+            | OperatorDefinition (BinaryOperator opName, leftName, rightName, body) ->
+                computeFunctionDefinition (Identifier opName, [leftName; rightName], body) state
+            | ListAssignment(listName, expressions) ->
+                computeListAssignment (listName, expressions) outputWriter state
+            | ListAssignmentWithRange (listName, lowerBound, upperBound) ->
+                computeListAssignmentWithRange (listName, lowerBound, upperBound) outputWriter state
+            | ListInitialisationWithValue (listName, size, value) ->
+                computeListInitialisationWithValue (listName, size, value) outputWriter state
+            | ListInitialisationWithCode(listName, size, indexName, instructions) ->
+                computeListInitialisationWithCode (listName, size, indexName, instructions) outputWriter state
+            | ListElementAssignment(identifier, indexExpression, valueExpression) ->
+                computeListElementAssignment (identifier, indexExpression, valueExpression) outputWriter state
+            | Iteration(listName, elementName, loopBody) ->
+                computeListIteration (listName, elementName, loopBody) outputWriter state
+        
+        match computationResult with
+        | Ok newState -> compute tail outputWriter newState
+        | Error msg ->
+            outputWriter.WriteERR(msg, line)
+            Error msg
 
 
 and private eval

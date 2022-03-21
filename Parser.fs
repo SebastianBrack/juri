@@ -277,6 +277,8 @@ expressionImpl.Value <-
 // instructions
 let private instruction, instructionImpl = createParserForwarder ()
 
+let addLastLineToResult inst context = inst, context.Line - 1
+let addThisLineToResult inst context = inst, context.Line
 
 let emptyLines =
     let commentLine =
@@ -385,9 +387,10 @@ let private listInitialisationWithCode = // has to be tried before listInitialis
     .>>. (expression |> failAsFatal)
     .>> jas
     .>>. (identifier |> failAsFatal)
+    ||>> addThisLineToResult
     .>> newline .>> emptyLines
     .>>. (codeblock |> failAsFatal)
-    |>> fun (((id, size), indexName), body) -> ListInitialisationWithCode (id, size, indexName, body)
+    |>> fun ((((id, size), indexName), line), body) -> (ListInitialisationWithCode (id, size, indexName, body)), line
     
     
     
@@ -417,9 +420,10 @@ let private listIteration =
     >>. (listIdentifier |> failAsFatal)
     .>> (jas |> failAsFatal)
     .>>. identifier
+    ||>> addThisLineToResult
     .>> newline .>> emptyLines
     .>>. (codeblock |> failAsFatal)
-    |>> fun ((listName, elementName), body) -> Iteration (listName, elementName, body)
+    |>> fun (((listName, elementName), line), body) -> (Iteration (listName, elementName, body)), line
     
     
 
@@ -427,9 +431,10 @@ let private functionDefinition =
     jfun
     >>. (identifier |> failAsFatal)
     .>>. ((many1 identifier) |> failAsFatal)
+    ||>> addThisLineToResult
     .>> newline .>> emptyLines
     .>>. (codeblock |> failAsFatal)
-    |>> fun ((id, argNames), body) -> FunctionDefinition (id, argNames, body)
+    |>> fun (((id, argNames), line), body) -> (FunctionDefinition (id, argNames, body)), line
 
 
 
@@ -438,9 +443,10 @@ let private binaryOperatorDefinition =
     >>. (operator |> failAsFatal)
     .>>. (identifier |> failAsFatal)
     .>>. (identifier |> failAsFatal)
+    ||>> addThisLineToResult
     .>> newline .>> emptyLines
     .>>. (codeblock |> failAsFatal)
-    |>> fun (((op, left), right), body) -> OperatorDefinition (op, left, right, body)
+    |>> fun ((((op, left), right), line), body) -> (OperatorDefinition (op, left, right, body)), line
 
 
 
@@ -448,9 +454,10 @@ let private loop =
     ifloop
     >>. (expression |> failAsFatal)
     .>>. repeat
+    ||>> addThisLineToResult
     .>> newline .>> emptyLines
     .>>. (codeblock |> failAsFatal)
-    |>> fun ((con, rep), body) -> Loop (con, rep, body)
+    |>> fun (((con, rep), line), body) -> (Loop (con, rep, body)), line
     
     
     
@@ -480,21 +487,20 @@ let private returnStatement =
 
 instructionImpl.Value <-
     [   binaryOperatorDefinition
-        conditionWithSingleStatement
+        conditionWithSingleStatement ||>> addLastLineToResult
         loop
         functionDefinition
-        assignment
-        listAssignmentWithRange
-        listAssignment
+        assignment ||>> addLastLineToResult
+        listAssignmentWithRange ||>> addLastLineToResult
+        listAssignment ||>> addLastLineToResult
         listInitialisationWithCode
-        listInitialisationWithValue
-        listElementAssignment
+        listInitialisationWithValue ||>> addLastLineToResult
+        listElementAssignment ||>> addLastLineToResult
         listIteration
-        breakStatement
-        returnStatement
-        instructionExpression ]
+        breakStatement ||>> addLastLineToResult
+        returnStatement ||>> addLastLineToResult
+        instructionExpression ||>> addLastLineToResult ]
     |> choice
-    ||>> fun inst context -> (inst, context.Line - 1)
 
 
 

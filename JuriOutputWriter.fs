@@ -15,7 +15,7 @@ type ConsoleWriter() =
     interface IOutputWriter with
         member this.WriteSTD(msg) =
             Console.ResetColor()
-            printf $"juri > {msg}"
+            printf $"{msg}"
         member this.WriteERR(msg, line) =
             Console.ForegroundColor <- ConsoleColor.Red
             printfn ""
