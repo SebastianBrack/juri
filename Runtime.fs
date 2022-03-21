@@ -29,7 +29,7 @@ type ProvidedFunction =
 and EnvironmentObject =
     | Variable of float
     | List of float array
-    | CustomFunction of expectedArguments: Identifier list * functionBody: Instruction list
+    | CustomFunction of expectedArguments: Identifier list * functionBody: JuriProgram
     | ProvidedFunction of ProvidedFunction
 
 
@@ -56,7 +56,7 @@ let evalResultPrinter
         (exp: InterpreterResult<'a>) =
     match exp with
     | Error e ->
-        outputWriter.WriteERR(e)
+        outputWriter.WriteERR(e, -1)
         exp
     | Ok x when not printOnlyErrors ->
         outputWriter.WriteSTD(x.ToString())

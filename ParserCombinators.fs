@@ -117,6 +117,20 @@ let map mapper parser =
 let ( |>> ) parser mapper = map mapper parser
 
 
+
+/// Maps the result and the context of a parser according to the mapper.
+let mapc mapper parser =
+    fun stream ->
+        match run parser stream with
+        | Success (r,c,p) -> Success (mapper r c, c, p)
+        | Failure (m,e)    -> Failure (m,e)
+        | Fatal (m,e)      -> Fatal (m,e)
+    |> Parser
+    
+/// infix version of mapc
+let ( ||>> ) parser mapper = mapc mapper parser
+
+
 /// Applies the parser and changes the Error message to msg if the parser should fail.
 let deferr msg parser =
     fun stream ->
