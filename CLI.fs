@@ -18,20 +18,15 @@ let private runScript (script: string) =
     let outputWriter : IOutputWriter = ConsoleWriter()
     
     match processImports (script+"\n") outputWriter with
-        | Error msg -> outputWriter.WriteERR(msg) ;0
+        | Error _ -> 0
         | Ok (state,steam) -> 
             match steam.RunParser(juriProgram)  with
             | Success (r,_,_) -> 
                 compute r outputWriter state
-                |> evalResultPrinter true outputWriter
                 |> ignore
                 0
-            | Failure (msg, _) ->
-                outputWriter.WriteERR(msg)
-                0
-            | Fatal (msg, _) ->
-                outputWriter.WriteERR(msg)
-                0
+            | Failure _ -> 0
+            | Fatal _ -> 0
 
 let run argv =
     match argv with

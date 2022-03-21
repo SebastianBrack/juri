@@ -494,7 +494,7 @@ instructionImpl.Value <-
         returnStatement
         instructionExpression ]
     |> choice
-    ||>> fun inst context -> (inst, context.Line)
+    ||>> fun inst context -> (inst, context.Line - 1)
 
 
 

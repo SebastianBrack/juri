@@ -5,6 +5,7 @@ open Juri.Internal.LanguageModel
 open Juri.Internal.Output
 open Juri.Internal.OutputWriter
 open Juri.Internal.Parser
+open Juri.Internal.ParserCombinators
 open Juri.Internal.Runtime
 open Juri.Internal.CoreLib
 open Juri.Internal.Interpreter
@@ -14,23 +15,22 @@ type public Interpreter() =
     let mutable program : JuriProgram = []
     let mutable parsingOK = false
     let mutable outputStreams = InterpreterOutputStreams()
+    let outputWriter : IOutputWriter = StreamWriter(outputStreams)
     member this.GetOutputStreams() = outputStreams
     member this.ParsingOk() = parsingOK
     member this.ParseJuriProgram(code: char seq) =
-        let parsingResult = parseProgram (Seq.append "\n" code)
+        let charStream = CharStream(Seq.append "\n" code, JuriContext.Default)
+        let parsingResult = charStream.RunParser(juriProgram)
         match parsingResult with
-        | ParserCombinators.Success(instructions, _, _) ->
+        | Success(instructions, _, _) ->
             program <- instructions
             parsingOK <- true
-        | ParserCombinators.Failure(msg, _) ->
+        | Failure(msg, _) ->
             parsingOK <- false
-            outputStreams.Error.Write(msg+"\n")
-        | ParserCombinators.Fatal(msg, _) ->
+            outputWriter.WriteERR(msg, charStream.GetContext().Line)
+        | Fatal(msg, _) ->
             parsingOK <- false
-            outputStreams.Error.Write(msg+"\n")
+            outputWriter.WriteERR(msg, charStream.GetContext().Line)
     member this.ExecuteProgram() =
-        let outputWriter = StreamWriter(outputStreams)
         let initialState = { ComputationState.Default with Environment = createEnvWithCoreLibFunctions () }
-        match compute program outputWriter initialState with
-        | Ok _      -> ()
-        | Error msg -> outputStreams.Error.Write(msg)
+        compute program outputWriter initialState

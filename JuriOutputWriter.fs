@@ -7,7 +7,7 @@ open System
 
 type IOutputWriter =
     abstract member WriteSTD: string -> unit
-    abstract member WriteERR: string -> unit
+    abstract member WriteERR: string * int -> unit
     abstract member WriteMET: string -> unit
     
 
@@ -16,19 +16,24 @@ type ConsoleWriter() =
         member this.WriteSTD(msg) =
             Console.ResetColor()
             printf $"juri > {msg}"
-        member this.WriteERR(msg) =
+        member this.WriteERR(msg, line) =
             Console.ForegroundColor <- ConsoleColor.Red
-            printf $"juri > {msg}"
+            printfn ""
+            printfn $"Fehler in Zeile {line}: {msg}"
             Console.ResetColor()
         member this.WriteMET(msg) =
             Console.ForegroundColor <- ConsoleColor.DarkCyan
-            printf $"juri > {msg}"
+            printfn $"juri > {msg}"
             Console.ResetColor()
             
             
 type StreamWriter(streams: InterpreterOutputStreams) =
     let streams = streams
     interface IOutputWriter with
-        member this.WriteSTD(msg) = streams.Standard.Write(msg)
-        member this.WriteERR(msg) = streams.Error.Write(msg)
-        member this.WriteMET(msg) = streams.MetaInfo.Write(msg)
+        member this.WriteSTD(msg) =
+            streams.Standard.Write(msg)
+        member this.WriteERR(msg, line) =
+            let error = {Message = msg; Line = line}
+            streams.Error.Write(error)
+        member this.WriteMET(msg) =
+            streams.MetaInfo.Write(msg)

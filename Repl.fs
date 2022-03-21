@@ -22,15 +22,12 @@ let rec private repl (outputWriter: IOutputWriter) (state: ComputationState) =
     match stream.RunParser(juriProgram) with
     | Success (r,_,_) ->
         compute r outputWriter state
-        |> evalResultPrinter true outputWriter
         >>= repl outputWriter
     | Failure (msg, _) ->
-        outputWriter.WriteERR($"Error in Zeile {stream.GetContext().Line}:\n")
-        outputWriter.WriteERR(msg+"\n")
+        outputWriter.WriteERR(msg, stream.GetContext().Line)
         repl outputWriter state
     | Fatal (msg, _) ->
-        outputWriter.WriteERR($"Error in Zeile {stream.GetContext().Line}:\n")
-        outputWriter.WriteERR(msg+"\n")
+        outputWriter.WriteERR(msg, stream.GetContext().Line)
         repl outputWriter state
 
 

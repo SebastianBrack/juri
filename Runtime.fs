@@ -56,7 +56,7 @@ let evalResultPrinter
         (exp: InterpreterResult<'a>) =
     match exp with
     | Error e ->
-        outputWriter.WriteERR(e)
+        outputWriter.WriteERR(e, -1)
         exp
     | Ok x when not printOnlyErrors ->
         outputWriter.WriteSTD(x.ToString())
