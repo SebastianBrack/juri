@@ -13,7 +13,7 @@ open Runtime
 let rec private computeLoop
         (con: Expression)
         (rep: bool)
-        (body: Instruction list)
+        (body: JuriProgram)
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
@@ -203,14 +203,14 @@ and private computeListIteration
 
 
 and compute
-        (program: Instruction list)
+        (program: JuriProgram)
         (outputWriter: IOutputWriter)
         (state: ComputationState) : InterpreterResult<ComputationState> =
     
     if state.BreakFlag || state.ReturnFlag then Ok state else
         match program with
         | [] -> Ok state
-        | instruction :: tail ->
+        | (instruction, int) :: tail ->
             match instruction with
             | Break ->
                 Ok {state with BreakFlag = true}

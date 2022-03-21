@@ -494,10 +494,11 @@ instructionImpl.Value <-
         returnStatement
         instructionExpression ]
     |> choice
+    ||>> fun inst context -> (inst, context.Line)
 
 
 
-let juriProgram =
+let juriProgram=
     emptyLines
     >>. many1 instruction
     .>> emptyLines

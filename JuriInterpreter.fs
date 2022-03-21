@@ -11,7 +11,7 @@ open Juri.Internal.Interpreter
 
 
 type public Interpreter() =
-    let mutable program : Instruction list = []
+    let mutable program : JuriProgram = []
     let mutable parsingOK = false
     let mutable outputStreams = InterpreterOutputStreams()
     member this.GetOutputStreams() = outputStreams
